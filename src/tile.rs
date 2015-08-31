@@ -174,7 +174,7 @@ impl Tile {
     }
 
     pub fn is_blocked(&self) -> bool {
-        self.neighbours.borrow().len() <= 1 && self.blocked_by.get() == 0
+        self.neighbours.borrow().len() == 2 || self.blocked_by.get() > 0
     }
 
     pub fn print(&self) {

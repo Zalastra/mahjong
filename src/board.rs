@@ -20,7 +20,7 @@ pub struct Board {
     width: u8,
     depth: u8,
     pub tiles: HashMap<u32, Tile>,
-    reachable_tiles: Vec<u32>,
+    pub reachable_tiles: Vec<u32>,
 }
 
 impl Board {
@@ -56,19 +56,19 @@ impl Board {
 
             if z == 0 { continue; }
             let mut potential_blocking_positions = Vec::new();
-            potential_blocking_positions.push(Position::new(x, y, z));
+            potential_blocking_positions.push(Position::new(x, y, z - 1));
             if x >= 1 {
-                potential_blocking_positions.push(Position::new(x - 1, y, z));
-                if y >= 1 { potential_blocking_positions.push(Position::new(x - 1, y - 1, z)); }
-                if y <= height - 2 { potential_blocking_positions.push(Position::new(x - 1, y + 1, z)); }
+                potential_blocking_positions.push(Position::new(x - 1, y, z - 1));
+                if y >= 1 { potential_blocking_positions.push(Position::new(x - 1, y - 1, z - 1)); }
+                if y <= height - 2 { potential_blocking_positions.push(Position::new(x - 1, y + 1, z - 1)); }
             }
             if x <= width - 2 {
-                potential_blocking_positions.push(Position::new(x + 1, y, z));
-                if y >= 1 { potential_blocking_positions.push(Position::new(x + 1, y - 1, z)); }
-                if y <= height - 2 { potential_blocking_positions.push(Position::new(x + 1, y + 1, z)); }
+                potential_blocking_positions.push(Position::new(x + 1, y, z - 1));
+                if y >= 1 { potential_blocking_positions.push(Position::new(x + 1, y - 1, z - 1)); }
+                if y <= height - 2 { potential_blocking_positions.push(Position::new(x + 1, y + 1, z - 1)); }
             }
-            if y >= 1 { potential_blocking_positions.push(Position::new(x, y - 1, z)); }
-            if y <= height - 2 { potential_blocking_positions.push(Position::new(x, y + 1, z)); }
+            if y >= 1 { potential_blocking_positions.push(Position::new(x, y - 1, z - 1)); }
+            if y <= height - 2 { potential_blocking_positions.push(Position::new(x, y + 1, z - 1)); }
             for position in potential_blocking_positions {
                 if let Some(other_tile) = tiles.get(&position.to_key()) {
                     other_tile.blocked_by.set(other_tile.blocked_by.get() + 1);
@@ -89,5 +89,11 @@ impl Board {
             tiles: tiles,
             reachable_tiles: reachable_tiles,
         }
+    }
+
+    pub fn make_move(&self, key1: u32, key2: u32) -> bool {
+        if self.tiles.get(&key1).unwrap().type != self.tiles.get(&key2).unwrap() { false }
+
+        let mut tile1, mut tile2 = self.tiles.
     }
 }
