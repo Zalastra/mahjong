@@ -4,15 +4,13 @@ mod tile;
 mod board;
 
 use board::Board;
-use tile::Position;
-use tile::Type::{Circle};
-use tile::Nonary::{One, Two, Three, Four, Five, Six, Seven, Eight, Nine};
+use tile::*;
 
 fn main() {
-    let positions = vec![(Position::new(0, 0, 0), Circle(One)),
-                        (Position::new(0, 2, 0), Circle(Two)),
-                        (Position::new(0, 4, 0), Circle(Three)),
-                        (Position::new(0, 2, 1), Circle(Four)),];
+    let positions = vec![(tile::Position::new(0, 0, 0), tile::TileType::CircleOne),
+                        (tile::Position::new(0, 2, 0), tile::TileType::CircleTwo),
+                        (tile::Position::new(0, 4, 0), tile::TileType::CircleThree),
+                        (tile::Position::new(0, 2, 1), tile::TileType::CircleFour),];
     let b = Board::new(positions);
     for tile in b.tiles.values() {
         tile.print();

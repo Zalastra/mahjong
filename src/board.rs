@@ -1,19 +1,14 @@
 use std::collections::HashMap;
 
-use tile::{Tile, Position, Type, Nonary, Wind, Dragon, Flower, Season};
-use tile::Nonary::{One, Two, Three, Four, Five, Six, Seven, Eight, Nine};
-use tile::Wind::{North, South, East, West};
-use tile::Dragon::{Red, Green, White};
-use tile::Flower::{Plum, Orchid, Chrysanthemum, Bamboo};
-use tile::Season::{Spring, Summer, Autumn, Winter};
+use tile::{Tile, Position, TileType};
 
 // TODO: added for randomizing the board, might be a better way
 //static TYPES: [Type; 7] = [Circle, Type::Bamboo, Type::Character, Type::Wind, Type::Dragon, Type::Flower, Type::Season];
-static NONARY: [Nonary; 9] = [One, Two, Three, Four, Five, Six, Seven, Eight, Nine];
-static WINDS: [Wind; 4] = [North, South, East, West];
-static DRAGONS: [Dragon; 3] = [Red, Green, White];
-static FLOWERS: [Flower; 4] = [Plum, Orchid, Chrysanthemum, Bamboo];
-static SEASONS: [Season; 4] = [Spring, Summer, Autumn, Winter];
+//static NONARY: [Nonary; 9] = [One, Two, Three, Four, Five, Six, Seven, Eight, Nine];
+//static WINDS: [Wind; 4] = [North, South, East, West];
+//static DRAGONS: [Dragon; 3] = [Red, Green, White];
+//static FLOWERS: [Flower; 4] = [Plum, Orchid, Chrysanthemum, Bamboo];
+//static SEASONS: [Season; 4] = [Spring, Summer, Autumn, Winter];
 
 pub struct Board {
     height: u8,
@@ -26,7 +21,7 @@ pub struct Board {
 impl Board {
     // TODO: implement tile randomizing
     // TODO: take in a immutable borrowed vector instead of moving it
-    pub fn new(mut positions: Vec<(Position, Type)>) -> Board {
+    pub fn new(mut positions: Vec<(Position, TileType)>) -> Board {
         let mut tiles = HashMap::new();
         let (mut height, mut width, mut depth) = (4, 4, 0);
 
@@ -92,8 +87,10 @@ impl Board {
     }
 
     pub fn make_move(&self, key1: u32, key2: u32) -> bool {
-        if self.tiles.get(&key1).unwrap().type != self.tiles.get(&key2).unwrap() { false }
-
-        let mut tile1, mut tile2 = self.tiles.
+        if !self.tiles.get(&key1).unwrap().matches(self.tiles.get(&key2).unwrap()) {
+            return false
+        }
+        true
+        //let mut tile1, mut tile2 = self.tiles.
     }
 }
