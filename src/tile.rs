@@ -1,7 +1,19 @@
+use board::Board;
+
 use std::cell::{Cell, RefCell};
+
+use self::TileType::*;
 
 #[derive(PartialEq)]
 pub enum TileType {
+    // Are these different circles or amount of circles?
+    // Like a tile with five circles or the fifth type of circle?
+    // If the former, rename to something like FiveCircles or CircleTimesFive
+    // If the latter, improve naming, think up something else than five
+
+    // Consider a hierarchy: Circle/Bamboo/Character/Wind/Dragon/Flower/Season, each
+    // with 4 or 9 subtypes. After looking up these are called suits, get this
+    // concept in your code!
     CircleOne, CircleTwo, CircleThree, CircleFour, CircleFive,
     CircleSix, CircleSeven, CircleEight, CircleNine,
     BambooOne, BambooTwo, BambooThree, BambooFour, BambooFive,
@@ -17,17 +29,21 @@ pub enum TileType {
 impl TileType {
     fn matches(&self, other: &TileType) -> bool {
         match *self {
-            TileType::FlowerPlum | TileType::FlowerOrchid |
-            TileType::FlowerChrysanthemum | TileType::FlowerBamboo => match *other {
-                TileType::FlowerPlum | TileType::FlowerOrchid |
-                TileType::FlowerChrysanthemum | TileType::FlowerBamboo => true,
-                _ => false,
+            FlowerPlum | FlowerOrchid |
+            FlowerChrysanthemum | FlowerBamboo => {
+                match *other {
+                    FlowerPlum | FlowerOrchid |
+                    FlowerChrysanthemum | FlowerBamboo => true,
+                    _ => false,
+                }
             },
-            TileType::SeasonSpring | TileType::SeasonSummer |
-            TileType::SeasonAutumn | TileType::SeasonWinter => match *other {
-                TileType::SeasonSpring | TileType::SeasonSummer |
-                TileType::SeasonAutumn | TileType::SeasonWinter => true,
-                _ => false,
+            SeasonSpring | SeasonSummer |
+            SeasonAutumn | SeasonWinter => {
+                match *other {
+                    SeasonSpring | SeasonSummer |
+                    SeasonAutumn | SeasonWinter => true,
+                    _ => false,
+                }
             },
             _ => return *self == *other,
         }
@@ -35,52 +51,53 @@ impl TileType {
 
     fn to_str(&self) -> &str {
         match *self {
-            TileType::CircleOne => "o1",
-            TileType::CircleTwo => "o2",
-            TileType::CircleThree => "o3",
-            TileType::CircleFour => "o4",
-            TileType::CircleFive => "o5",
-            TileType::CircleSix => "o6",
-            TileType::CircleSeven => "o7",
-            TileType::CircleEight => "o8",
-            TileType::CircleNine => "o9",
-            TileType::BambooOne => "b1",
-            TileType::BambooTwo => "b2",
-            TileType::BambooThree => "b3",
-            TileType::BambooFour => "b4",
-            TileType::BambooFive => "b5",
-            TileType::BambooSix => "b6",
-            TileType::BambooSeven => "b7",
-            TileType::BambooEight => "b8",
-            TileType::BambooNine => "b9",
-            TileType::CharacterOne => "c1",
-            TileType::CharacterTwo => "c2",
-            TileType::CharacterThree => "c3",
-            TileType::CharacterFour => "c4",
-            TileType::CharacterFive => "c5",
-            TileType::CharacterSix => "c6",
-            TileType::CharacterSeven => "c7",
-            TileType::CharacterEight => "c8",
-            TileType::CharacterNine => "c9",
-            TileType::WindNorth => "wN",
-            TileType::WindEast => "wE",
-            TileType::WindSouth => "wS",
-            TileType::WindWest => "wW",
-            TileType::DragonRed => "dR",
-            TileType::DragonGreen => "dG",
-            TileType::DragonWhite => "dW",
-            TileType::FlowerPlum => "fP",
-            TileType::FlowerOrchid => "fO",
-            TileType::FlowerChrysanthemum => "fC",
-            TileType::FlowerBamboo => "fB",
-            TileType::SeasonSpring => "sL",
-            TileType::SeasonSummer => "sS",
-            TileType::SeasonAutumn => "sA",
-            TileType::SeasonWinter => "sW",
+            CircleOne => "o1",
+            CircleTwo => "o2",
+            CircleThree => "o3",
+            CircleFour => "o4",
+            CircleFive => "o5",
+            CircleSix => "o6",
+            CircleSeven => "o7",
+            CircleEight => "o8",
+            CircleNine => "o9",
+            BambooOne => "b1",
+            BambooTwo => "b2",
+            BambooThree => "b3",
+            BambooFour => "b4",
+            BambooFive => "b5",
+            BambooSix => "b6",
+            BambooSeven => "b7",
+            BambooEight => "b8",
+            BambooNine => "b9",
+            CharacterOne => "c1",
+            CharacterTwo => "c2",
+            CharacterThree => "c3",
+            CharacterFour => "c4",
+            CharacterFive => "c5",
+            CharacterSix => "c6",
+            CharacterSeven => "c7",
+            CharacterEight => "c8",
+            CharacterNine => "c9",
+            WindNorth => "wN",
+            WindEast => "wE",
+            WindSouth => "wS",
+            WindWest => "wW",
+            DragonRed => "dR",
+            DragonGreen => "dG",
+            DragonWhite => "dW",
+            FlowerPlum => "fP",
+            FlowerOrchid => "fO",
+            FlowerChrysanthemum => "fC",
+            FlowerBamboo => "fB",
+            SeasonSpring => "sL",
+            SeasonSummer => "sS",
+            SeasonAutumn => "sA",
+            SeasonWinter => "sW",
         }
     }
 }
 
+// NOTE might need to moved to a different file based on how we implement the board/tile structure
 pub struct Position {
     pub x: u8,
     pub y: u8,
@@ -98,7 +115,7 @@ impl Position {
 }
 
 pub struct Tile {
-    pub pos: Position,
+    pub position: Position,
     pub kind: TileType,
     pub blocking: RefCell<Vec<u32>>,
     pub neighbours: RefCell<Vec<u32>>,
@@ -106,9 +123,9 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub fn new(pos: Position, kind: TileType) -> Tile {
+    pub fn new(position: Position, kind: TileType) -> Tile {
         Tile {
-            pos: pos,
+            position: position,
             kind: kind,
             blocking: RefCell::new(Vec::new()),
             neighbours: RefCell::new(Vec::new()),
@@ -125,6 +142,6 @@ impl Tile {
     }
 
     pub fn print(&self) {
-        print!("{}|{}", self.pos.z, self.kind.to_str())
+        print!("{}|{}", self.position.z, self.kind.to_str())
     }
 }

@@ -10,6 +10,8 @@ use tile::{Tile, Position, TileType};
 //static FLOWERS: [Flower; 4] = [Plum, Orchid, Chrysanthemum, Bamboo];
 //static SEASONS: [Season; 4] = [Spring, Summer, Autumn, Winter];
 
+// TODO: refactor tiles datastructure: make it a normal vector
+//       we dont care about needing to iterate over all tiles for certain operations
 pub struct Board {
     height: u8,
     width: u8,
@@ -20,21 +22,26 @@ pub struct Board {
 
 impl Board {
     // TODO: implement tile randomizing
+    // NOTE(Edwin): create a generation algorithm by placing valid moves on the board one by one
+    
     // TODO: take in a immutable borrowed vector instead of moving it
+    // NOTE(Edwin): Refactor to smaller function ->
+    //              make it more readable by creating functions that name all the different
+    //              operations done for board creation
     pub fn new(mut positions: Vec<(Position, TileType)>) -> Board {
         let mut tiles = HashMap::new();
         let (mut height, mut width, mut depth) = (4, 4, 0);
 
         while !positions.is_empty() {
-            let (pos, kind) = positions.pop().expect("non empty vector should always pop!?");
-            if height <= pos.y { height = pos.y + 1; }
-            if width <= pos.x { width = pos.x + 1; }
-            if depth <= pos.z { depth = pos.z + 1; }
-            tiles.insert(pos.to_key(), Tile::new(pos, kind));
+            let (position, kind) = positions.pop().expect("non empty vector should always pop!?");
+            if height <= position.y { height = position.y + 1; } // Why +1?
+            if width <= position.x { width = position.x + 1; }
+            if depth <= position.z { depth = position.z + 1; }
+            tiles.insert(position.to_key(), Tile::new(position, kind));
         }
 
         for tile in tiles.values() {
-            let (x, y, z) = (tile.pos.x, tile.pos.y, tile.pos.z);
+            let (x, y, z) = (tile.position.x, tile.position.y, tile.position.z);
 
             let mut potential_neighbours = Vec::new();
             if x >= 2 {
