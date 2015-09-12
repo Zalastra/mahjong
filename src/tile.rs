@@ -1,10 +1,8 @@
-use board::Board;
-
 use std::cell::{Cell, RefCell};
 
 use self::TileType::*;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum TileType {
     // Are these different circles or amount of circles?
     // Like a tile with five circles or the fifth type of circle?
@@ -98,24 +96,21 @@ impl TileType {
 }
 
 // NOTE might need to moved to a different file based on how we implement the board/tile structure
-pub struct Position {
+#[derive(PartialEq, Clone)]
+pub struct TilePosition {
     pub x: u8,
     pub y: u8,
     pub z: u8,
 }
 
-impl Position {
-    pub fn new(x: u8, y: u8, z: u8) -> Position {
-        Position {x: x, y: y, z: z, }
-    }
-
-    pub fn to_key(&self) -> u32 {
-        (self.x as u32) << 16 | (self.y as u32) << 8 | self.z as u32
+impl TilePosition {
+    pub fn new(x: u8, y: u8, z: u8) -> Self {
+        TilePosition {x: x, y: y, z: z, }
     }
 }
 
 pub struct Tile {
-    pub position: Position,
+    pub position: TilePosition,
     pub kind: TileType,
     pub blocking: RefCell<Vec<u32>>,
     pub neighbours: RefCell<Vec<u32>>,
@@ -123,7 +118,7 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub fn new(position: Position, kind: TileType) -> Tile {
+    pub fn new(position: TilePosition, kind: TileType) -> Tile {
         Tile {
             position: position,
             kind: kind,

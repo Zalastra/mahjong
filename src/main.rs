@@ -1,5 +1,7 @@
 #[allow(unused_variables, dead_code, unused_imports)]
 
+extern crate rand;
+
 mod tile;
 mod board;
 
@@ -7,18 +9,13 @@ use board::Board;
 use tile::*;
 
 fn main() {
-    let positions = vec![(tile::Position::new(0, 0, 0), tile::TileType::CircleOne),
-                        (tile::Position::new(0, 2, 0), tile::TileType::CircleTwo),
-                        (tile::Position::new(0, 4, 0), tile::TileType::CircleThree),
-                        (tile::Position::new(0, 2, 1), tile::TileType::CircleFour),];
-    let board = Board::new(positions);
-    for tile in board.tiles.values() {
+    let positions = vec![tile::TilePosition::new(0, 0, 0),
+                        tile::TilePosition::new(0, 2, 0),
+                        tile::TilePosition::new(0, 4, 0),
+                        tile::TilePosition::new(0, 2, 1),];
+    let board = Board::new(&positions);
+    for tile in board.tiles.iter() {
         tile.print();
-        println!("");
-    }
-    println!("\n\n");
-    for key in board.reachable_tiles {
-        board.tiles.get(&key).expect("").print();
         println!("");
     }
 }

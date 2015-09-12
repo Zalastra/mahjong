@@ -2,3 +2,6 @@
 name = "mahjong"
 version = "0.1.0"
 authors = ["Maarten Bonsema <maarten.bonsema@gmail.com>"]
+
+[dependencies]
+rand = "0.3.11"
