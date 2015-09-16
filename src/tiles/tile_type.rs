@@ -1,5 +1,3 @@
-use std::cell::{Cell, RefCell};
-
 use self::TileType::*;
 
 #[derive(PartialEq, Clone, Copy)]
@@ -25,7 +23,7 @@ pub enum TileType {
 }
 
 impl TileType {
-    fn matches(&self, other: &TileType) -> bool {
+    pub fn matches(&self, other: &TileType) -> bool {
         match *self {
             FlowerPlum | FlowerOrchid |
             FlowerChrysanthemum | FlowerBamboo => {
@@ -47,7 +45,7 @@ impl TileType {
         }
     }
 
-    fn to_str(&self) -> &str {
+    pub fn to_str(&self) -> &str {
         match *self {
             CircleOne => "o1",
             CircleTwo => "o2",
@@ -92,51 +90,5 @@ impl TileType {
             SeasonAutumn => "sA",
             SeasonWinter => "sW",
         }
-    }
-}
-
-// NOTE might need to moved to a different file based on how we implement the board/tile structure
-#[derive(PartialEq, Clone)]
-pub struct TilePosition {
-    pub x: u8,
-    pub y: u8,
-    pub z: u8,
-}
-
-impl TilePosition {
-    pub fn new(x: u8, y: u8, z: u8) -> Self {
-        TilePosition {x: x, y: y, z: z, }
-    }
-}
-
-pub struct Tile {
-    pub position: TilePosition,
-    pub kind: TileType,
-    pub blocking: RefCell<Vec<u32>>,
-    pub neighbours: RefCell<Vec<u32>>,
-    pub blocked_by: Cell<u8>,
-}
-
-impl Tile {
-    pub fn new(position: TilePosition, kind: TileType) -> Tile {
-        Tile {
-            position: position,
-            kind: kind,
-            blocking: RefCell::new(Vec::new()),
-            neighbours: RefCell::new(Vec::new()),
-            blocked_by: Cell::new(0),
-        }
-    }
-
-    pub fn is_blocked(&self) -> bool {
-        self.neighbours.borrow().len() == 2 || self.blocked_by.get() > 0
-    }
-
-    pub fn matches(&self, other: &Tile) -> bool {
-        self.kind.matches(&other.kind)
-    }
-
-    pub fn print(&self) {
-        print!("{}|{}", self.position.z, self.kind.to_str())
     }
 }
