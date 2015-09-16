@@ -1,3 +1,5 @@
+use std::fmt;
+
 use self::TileType::*;
 
 #[derive(PartialEq, Clone, Copy)]
@@ -44,9 +46,11 @@ impl TileType {
             _ => return *self == *other,
         }
     }
+}
 
-    pub fn to_str(&self) -> &str {
-        match *self {
+impl fmt::Display for TileType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match *self {
             CircleOne => "o1",
             CircleTwo => "o2",
             CircleThree => "o3",
@@ -89,6 +93,7 @@ impl TileType {
             SeasonSummer => "sS",
             SeasonAutumn => "sA",
             SeasonWinter => "sW",
-        }
+        };
+        write!(f, "{}", s)
     }
 }

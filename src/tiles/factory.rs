@@ -50,7 +50,7 @@ static POSITIONS: [u32; 144] = [
     72, 74, 76, 78, 80, 82, 84, 86,
     134, 136, 138, 140, 142, 144, 146, 148, 150, 152,
     196, 198, 200, 202, 204, 206, 208, 210, 212, 214, 216, 218,
-    224, 226, 250,
+    224, 226, 252,
     260, 262, 264, 266, 268, 270, 272, 274, 276, 278, 280, 282,
     326, 328, 330, 332, 334, 336, 338, 340, 342, 344,
     392, 394, 396, 398, 400, 402, 404, 406,
@@ -80,12 +80,24 @@ pub struct TileFactory {
 
 impl TileFactory {
     pub fn new() -> Self {
+        let mut random_tile_types = Vec::new();
+        let mut rng = rand::thread_rng();
+
+        for tile_type in TILE_TYPES.iter() {
+            if random_tile_types.len() == 0 {
+                random_tile_types.push(*tile_type);
+            } else {
+                let index = Range::new(0, random_tile_types.len()).ind_sample(&mut rng);
+                random_tile_types.insert(index, *tile_type);
+            }
+        }
+
         let remaining_tiles = POSITIONS.iter()
-                                       .zip(TILE_TYPES.iter())
-                                       .map(|(&position, &tile_type)| {
-                                           let x = ((position % 1024) & 32) as u8;
+                                       .map(|&position| {
+                                           let x = ((position % 1024) % 32) as u8;
                                            let y = ((position % 1024) / 32) as u8;
                                            let z = (position / 1024) as u8;
+                                           let tile_type = random_tile_types.pop().expect("");
                                            Tile::new(TilePosition {x: x, y: y, z: z}, tile_type)
                                        })
                                        .collect();
@@ -96,11 +108,6 @@ impl TileFactory {
     }
 
     pub fn get_random_tile(&mut self) -> Option<Tile> {
-        let tile_count = self.remaining_tiles.len();
-        if tile_count == 0 { return None }
-        let tile_range = Range::new(0, tile_count);
-        let mut rng = rand::thread_rng();
-
-        Some(self.remaining_tiles.remove(tile_range.ind_sample(&mut rng)))
+        self.remaining_tiles.pop()
     }
 }

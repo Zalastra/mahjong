@@ -1,3 +1,5 @@
+use std::fmt;
+
 use tiles::tile_type::*;
 
 // NOTE might need to moved to a different file based on how we implement the board/tile structure
@@ -28,8 +30,10 @@ impl Tile {
     pub fn matches(&self, other: &Tile) -> bool {
         self.kind.matches(&other.kind)
     }
+}
 
-    pub fn print(&self) {
-        print!("{}|{}", self.position.z, self.kind.to_str())
+impl fmt::Display for Tile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}|{}", self.position.z, self.kind)
     }
 }
