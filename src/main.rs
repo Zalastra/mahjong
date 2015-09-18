@@ -1,11 +1,12 @@
 extern crate rand;
 
-mod tiles;
+mod tile;
 mod board;
 
 use board::Board;
 
 fn main() {
-    let board = Board::new();
+    let mut board = Board::new();
     println!("{}", board);
+    println!("{}", board.make_match(4, 0, 8, 2));
 }

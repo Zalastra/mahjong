@@ -2,9 +2,9 @@ extern crate rand;
 
 use rand::distributions::{IndependentSample, Range};
 
-use tiles::tile::*;
-use tiles::tile_type::TileType;
-use tiles::tile_type::TileType::*;
+use tile::tile::*;
+use tile::tile_type::TileType;
+use tile::tile_type::TileType::*;
 
 static TILE_TYPES: [TileType; 144] = [
     CircleOne, CircleOne, CircleOne, CircleOne,
@@ -80,27 +80,20 @@ pub struct TileFactory {
 
 impl TileFactory {
     pub fn new() -> Self {
-        let mut random_tile_types = Vec::new();
+        let mut random_tile_types = TILE_TYPES.to_vec();
         let mut rng = rand::thread_rng();
 
-        for tile_type in TILE_TYPES.iter() {
-            if random_tile_types.len() == 0 {
-                random_tile_types.push(*tile_type);
-            } else {
-                let index = Range::new(0, random_tile_types.len()).ind_sample(&mut rng);
-                random_tile_types.insert(index, *tile_type);
-            }
-        }
-
-        let remaining_tiles = POSITIONS.iter()
-                                       .map(|&position| {
-                                           let x = ((position % 1024) % 32) as u8;
-                                           let y = ((position % 1024) / 32) as u8;
-                                           let z = (position / 1024) as u8;
-                                           let tile_type = random_tile_types.pop().expect("");
-                                           Tile::new(TilePosition {x: x, y: y, z: z}, tile_type)
-                                       })
-                                       .collect();
+        let remaining_tiles =
+            POSITIONS.iter()
+                     .map(|&position| {
+                         let x = ((position % 1024) % 32) as u8;
+                         let y = ((position % 1024) / 32) as u8;
+                         let z = (position / 1024) as u8;
+                         let index = Range::new(0, random_tile_types.len()).ind_sample(&mut rng);
+                         let tile_type = random_tile_types.remove(index);
+                         Tile::new(TilePosition {x: x, y: y, z: z}, tile_type)
+                     })
+                     .collect();
 
         TileFactory {
             remaining_tiles: remaining_tiles,

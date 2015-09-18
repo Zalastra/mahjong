@@ -1,6 +1,6 @@
 use std::fmt;
 
-use tiles::tile_type::*;
+use tile::tile_type::*;
 
 // NOTE might need to moved to a different file based on how we implement the board/tile structure
 #[derive(PartialEq, Clone)]
@@ -12,23 +12,33 @@ pub struct TilePosition {
 
 pub struct Tile {
     pub position: TilePosition,
-    pub kind: TileType,
+    kind: TileType,
+    positions: Vec<TilePosition>,
 }
 
 impl Tile {
     pub fn new(position: TilePosition, kind: TileType) -> Tile {
+        let positions = vec![position.clone(),
+                             TilePosition {x: position.x + 1, y: position.y, z: position.z },
+                             TilePosition {x: position.x, y: position.y + 1, z: position.z },
+                             TilePosition {x: position.x + 1, y: position.y + 1, z: position.z }];
+
         Tile {
             position: position,
+            positions: positions,
             kind: kind,
         }
     }
 
-    pub fn is_blocked(&self) -> bool {
-        true//self.neighbours.borrow().len() == 2 || self.blocked_by.get() > 0
-    }
-
     pub fn matches(&self, other: &Tile) -> bool {
         self.kind.matches(&other.kind)
+    }
+
+    pub fn is_on_position(&self, other_position: TilePosition) -> bool {
+        for position in self.positions.iter() {
+            if *position == other_position { return true }
+        }
+        false
     }
 }
 
