@@ -4,15 +4,18 @@ use std::fmt::Write;
 
 use tile::*;
 
-#[allow(dead_code)]
 pub struct Board {
     height: u8,
     width: u8,
-    depth: u8,
     tiles: Vec<Tile>,
     played: Vec<usize>,
     blocking_data: Vec<TileBlockingData>,
     reachable_tiles: Vec<usize>,
+}
+
+pub struct BoardPosition {
+    pub x: u8,
+    pub y: u8,
 }
 
 struct TileBlockingData {
@@ -28,14 +31,13 @@ struct TileBlockingData {
 impl Board {
     pub fn new() -> Board {
         let mut tiles = Vec::new();
-        let (mut height, mut width, mut depth) = (0, 0, 0);
+        let (mut height, mut width) = (0, 0);
 
         let mut tile_factory = TileFactory::new();
 
         while let Some(tile) = tile_factory.get_random_tile() {
             if tile.position.x >= width { width = tile.position.x + 1; }
             if tile.position.y >= height { height = tile.position.y + 1; }
-            if tile.position.z >= depth { depth = tile.position.z + 1; }
 
             tiles.push(tile);
         }
@@ -45,7 +47,6 @@ impl Board {
         let mut board = Board {
             height: height,
             width: width,
-            depth: depth,
             tiles: tiles,
             played: Vec::new(),
             blocking_data: blocking_data,
@@ -198,17 +199,17 @@ impl Board {
 
     // TODO: refactor return type into Result
     // TODO: create position type for the arguments
-    pub fn make_match(&mut self, tile1_x: u8, tile1_y: u8, tile2_x: u8, tile2_y: u8) -> bool {
+    pub fn make_match(&mut self, position1: BoardPosition, position2: BoardPosition) -> bool {
         let tile1_index;
         let tile2_index;
 
-        if let Some(index) = self.get_top_tile_index_at_position(tile1_x, tile1_y) {
+        if let Some(index) = self.get_top_tile_index_at_position(position1) {
             tile1_index = index;
         } else {
             return false
         }
 
-        if let Some(index) = self.get_top_tile_index_at_position(tile2_x, tile2_y) {
+        if let Some(index) = self.get_top_tile_index_at_position(position2) {
             tile2_index = index;
         } else {
             return false
@@ -236,12 +237,12 @@ impl Board {
     }
 
     // TODO: create position type for the arguments
-    fn get_top_tile_index_at_position(&self, x: u8, y: u8) -> Option<usize> {
+    fn get_top_tile_index_at_position(&self, position: BoardPosition) -> Option<usize> {
         self.tiles.iter()
                   .enumerate()
                   .filter(|&(index, tile)| {
-                      tile.position.x == x &&
-                      tile.position.y == y &&
+                      tile.position.x == position.x &&
+                      tile.position.y == position.y &&
                       !self.played.contains(&index)
                   })
                   .fold(None, |top_tile_index, (index, tile)| {
@@ -271,7 +272,7 @@ impl fmt::Display for Board {
         for row in 0..self.height {
             output.push_str(&format!("{: >2}|", row));
             for column in 0..self.width {
-                if let Some(index) = self.get_top_tile_index_at_position(column, row) {
+                if let Some(index) = self.get_top_tile_index_at_position(BoardPosition { x: column, y: row }) {
                     output.push_str(&format!("{}", self.tiles[index]));
                 } else {
                     output.push_str("    ");
