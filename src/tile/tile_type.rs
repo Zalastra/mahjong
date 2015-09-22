@@ -2,29 +2,34 @@ use std::fmt;
 
 use self::TileType::*;
 
-#[derive(PartialEq, Clone, Copy)]
-pub enum TileType {
-    // Are these different circles or amount of circles?
-    // Like a tile with five circles or the fifth type of circle?
-    // If the former, rename to something like FiveCircles or CircleTimesFive
-    // If the latter, improve naming, think up something else than five
+iterable_enum!{
+    TileType {
+        derive(PartialEq, Clone, Copy)
 
-    // Consider a hierarchy: Circle/Bamboo/Character/Wind/Dragon/Flower/Season, each
-    // with 4 or 9 subtypes. After looking up these are called suits, get this
-    // concept in your code!
-    CircleOne, CircleTwo, CircleThree, CircleFour, CircleFive,
-    CircleSix, CircleSeven, CircleEight, CircleNine,
-    BambooOne, BambooTwo, BambooThree, BambooFour, BambooFive,
-    BambooSix, BambooSeven, BambooEight, BambooNine,
-    CharacterOne, CharacterTwo, CharacterThree, CharacterFour, CharacterFive,
-    CharacterSix, CharacterSeven, CharacterEight, CharacterNine,
-    WindNorth, WindEast, WindSouth, WindWest,
-    DragonRed, DragonGreen, DragonWhite,
-    FlowerPlum, FlowerOrchid, FlowerChrysanthemum, FlowerBamboo,
-    SeasonSpring, SeasonSummer, SeasonAutumn, SeasonWinter,
+        CircleOne, CircleTwo, CircleThree, CircleFour, CircleFive,
+        CircleSix, CircleSeven, CircleEight, CircleNine,
+        BambooOne, BambooTwo, BambooThree, BambooFour, BambooFive,
+        BambooSix, BambooSeven, BambooEight, BambooNine,
+        CharacterOne, CharacterTwo, CharacterThree, CharacterFour, CharacterFive,
+        CharacterSix, CharacterSeven, CharacterEight, CharacterNine,
+        WindNorth, WindEast, WindSouth, WindWest,
+        DragonRed, DragonGreen, DragonWhite,
+        FlowerPlum, FlowerOrchid, FlowerChrysanthemum, FlowerBamboo,
+        SeasonSpring, SeasonSummer, SeasonAutumn, SeasonWinter,
+    }
 }
 
 impl TileType {
+    pub fn max_allowed(&self) -> u8 {
+        match *self {
+            FlowerPlum | FlowerOrchid |
+            FlowerChrysanthemum | FlowerBamboo |
+            SeasonSpring | SeasonSummer |
+            SeasonAutumn | SeasonWinter => 1,
+            _ => 4,
+        }
+    }
+
     pub fn matches(&self, other: &TileType) -> bool {
         match *self {
             FlowerPlum | FlowerOrchid |

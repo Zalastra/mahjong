@@ -2,48 +2,10 @@ extern crate rand;
 
 use rand::distributions::{IndependentSample, Range};
 
+use iterable_enum::IterableEnum;
+
 use tile::tile::*;
 use tile::tile_type::TileType;
-use tile::tile_type::TileType::*;
-
-static TILE_TYPES: [TileType; 144] = [
-    CircleOne, CircleOne, CircleOne, CircleOne,
-    CircleTwo, CircleTwo, CircleTwo, CircleTwo,
-    CircleThree, CircleThree, CircleThree, CircleThree,
-    CircleFour, CircleFour, CircleFour, CircleFour,
-    CircleFive, CircleFive, CircleFive, CircleFive,
-    CircleSix, CircleSix, CircleSix, CircleSix,
-    CircleSeven, CircleSeven, CircleSeven, CircleSeven,
-    CircleEight, CircleEight, CircleEight, CircleEight,
-    CircleNine, CircleNine, CircleNine, CircleNine,
-    BambooOne, BambooOne, BambooOne, BambooOne,
-    BambooTwo, BambooTwo, BambooTwo, BambooTwo,
-    BambooThree, BambooThree, BambooThree, BambooThree,
-    BambooFour, BambooFour, BambooFour, BambooFour,
-    BambooFive, BambooFive, BambooFive, BambooFive,
-    BambooSix, BambooSix, BambooSix, BambooSix,
-    BambooSeven, BambooSeven, BambooSeven, BambooSeven,
-    BambooEight, BambooEight, BambooEight, BambooEight,
-    BambooNine, BambooNine, BambooNine, BambooNine,
-    CharacterOne, CharacterOne, CharacterOne, CharacterOne,
-    CharacterTwo, CharacterTwo, CharacterTwo, CharacterTwo,
-    CharacterThree, CharacterThree, CharacterThree, CharacterThree,
-    CharacterFour, CharacterFour, CharacterFour, CharacterFour,
-    CharacterFive, CharacterFive, CharacterFive, CharacterFive,
-    CharacterSix, CharacterSix, CharacterSix, CharacterSix,
-    CharacterSeven, CharacterSeven, CharacterSeven, CharacterSeven,
-    CharacterEight, CharacterEight, CharacterEight, CharacterEight,
-    CharacterNine, CharacterNine, CharacterNine, CharacterNine,
-    WindNorth, WindNorth, WindNorth, WindNorth,
-    WindEast, WindEast, WindEast, WindEast,
-    WindSouth, WindSouth, WindSouth, WindSouth,
-    WindWest, WindWest, WindWest, WindWest,
-    DragonRed, DragonRed, DragonRed, DragonRed,
-    DragonGreen, DragonGreen, DragonGreen, DragonGreen,
-    DragonWhite, DragonWhite, DragonWhite, DragonWhite,
-    FlowerPlum, FlowerOrchid, FlowerChrysanthemum, FlowerBamboo,
-    SeasonSpring, SeasonSummer, SeasonAutumn, SeasonWinter,
-];
 
 static POSITIONS: [u32; 144] = [
     4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
@@ -80,8 +42,14 @@ pub struct TileFactory {
 
 impl TileFactory {
     pub fn new() -> Self {
-        let mut random_tile_types = TILE_TYPES.to_vec();
         let mut rng = rand::thread_rng();
+        let mut tile_types = Vec::new();
+
+        for tile_type in TileType::iter() {
+            for _ in 0..tile_type.max_allowed() {
+                tile_types.push(*tile_type);
+            }
+        }
 
         let remaining_tiles =
             POSITIONS.iter()
@@ -89,8 +57,8 @@ impl TileFactory {
                          let x = ((position % 1024) % 32) as u8;
                          let y = ((position % 1024) / 32) as u8;
                          let z = (position / 1024) as u8;
-                         let index = Range::new(0, random_tile_types.len()).ind_sample(&mut rng);
-                         let tile_type = random_tile_types.remove(index);
+                         let index = Range::new(0, tile_types.len()).ind_sample(&mut rng);
+                         let tile_type = tile_types.remove(index);
                          Tile::new(TilePosition {x: x, y: y, z: z}, tile_type)
                      })
                      .collect();

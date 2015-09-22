@@ -5,3 +5,6 @@ authors = ["Maarten Bonsema <maarten.bonsema@gmail.com>"]
 
 [dependencies]
 rand = "0.3.11"
+
+[dependencies.iterable_enum]
+path = "iterable_enum"
