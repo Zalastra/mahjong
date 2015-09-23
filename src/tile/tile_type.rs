@@ -4,7 +4,7 @@ use self::TileType::*;
 
 iterable_enum!{
     TileType {
-        derive(PartialEq, Clone, Copy)
+        #![derive(PartialEq, Clone, Copy)]
 
         CircleOne, CircleTwo, CircleThree, CircleFour, CircleFive,
         CircleSix, CircleSeven, CircleEight, CircleNine,
