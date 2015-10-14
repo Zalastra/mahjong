@@ -2,6 +2,9 @@ use std::cell::Cell;
 use std::fmt;
 use std::fmt::Write;
 
+use sdl2::render::{Renderer};
+use sdl2::rect::Rect;
+
 use tile::*;
 
 pub struct Board {
@@ -29,11 +32,11 @@ struct TileBlockingData {
 }
 
 impl Board {
-    pub fn new() -> Board {
+    pub fn new(renderer: &Renderer) -> Board {
         let mut tiles = Vec::new();
         let (mut height, mut width) = (0, 0);
 
-        let mut tile_factory = TileFactory::new();
+        let mut tile_factory = TileFactory::new(renderer);
 
         while let Some(tile) = tile_factory.get_random_tile() {
             if tile.position.x >= width { width = tile.position.x + 1; }
@@ -53,11 +56,20 @@ impl Board {
             reachable_tiles: Vec::new(),
         };
 
-        Board::update_blocked_by_data(&board);
+        board.update_blocked_by_data();
 
-        Board::set_reachable_tiles(&mut board);
+        board.set_reachable_tiles();
 
         board
+    }
+
+    pub fn render(&self, renderer: &mut Renderer) {
+        for (index, tile) in self.tiles.iter().enumerate() {
+            if self.played.contains(&index) { continue; }
+            let x = tile.position.x as i32 * 23 + tile.position.z as i32 * 5 + 15;
+            let y = tile.position.y as i32 * 29 - tile.position.z as i32 * 5 + 15;
+            renderer.copy(&tile.texture, None, Rect::new(x, y, 46, 57).unwrap())
+        }
     }
 
     // TODO: make this more readable?

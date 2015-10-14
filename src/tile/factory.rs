@@ -1,8 +1,10 @@
-extern crate rand;
+use std::path::PathBuf;
 
+use sdl2::render::Renderer;
+use sdl2_image::LoadTexture;
+
+use rand;
 use rand::distributions::{IndependentSample, Range};
-
-use iterable_enum::IterableEnum;
 
 use tile::tile::*;
 use tile::tile_type::TileType;
@@ -41,7 +43,7 @@ pub struct TileFactory {
 }
 
 impl TileFactory {
-    pub fn new() -> Self {
+    pub fn new(renderer: &Renderer) -> Self {
         let mut rng = rand::thread_rng();
         let mut tile_types = Vec::new();
 
@@ -51,17 +53,24 @@ impl TileFactory {
             }
         }
 
-        let remaining_tiles =
+        let map_tile = |&position| {
+            let x = ((position % 1024) % 32) as u8;
+            let y = ((position % 1024) / 32) as u8;
+            let z = (position / 1024) as u8;
+            let index = Range::new(0, tile_types.len()).ind_sample(&mut rng);
+            let tile_type = tile_types.remove(index);
+            let mut texture_path = PathBuf::from("img/");
+            texture_path.push(tile_type.filename_texture());
+            let texture = renderer.load_texture(texture_path.as_path()).expect("error loading texture");
+            Tile::new(TilePosition {x: x, y: y, z: z}, texture, tile_type)
+        };
+
+        let mut remaining_tiles: Vec<Tile> =
             POSITIONS.iter()
-                     .map(|&position| {
-                         let x = ((position % 1024) % 32) as u8;
-                         let y = ((position % 1024) / 32) as u8;
-                         let z = (position / 1024) as u8;
-                         let index = Range::new(0, tile_types.len()).ind_sample(&mut rng);
-                         let tile_type = tile_types.remove(index);
-                         Tile::new(TilePosition {x: x, y: y, z: z}, tile_type)
-                     })
+                     .map(map_tile)
                      .collect();
+
+        remaining_tiles.reverse();
 
         TileFactory {
             remaining_tiles: remaining_tiles,

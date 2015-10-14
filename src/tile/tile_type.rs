@@ -2,19 +2,44 @@ use std::fmt;
 
 use self::TileType::*;
 
+macro_rules! iterable_enum {
+    (
+        $enum_name:ident {
+            #![$meta_decl:meta]
+            $( $variant:ident, )+
+        }
+    ) => (
+        #[$meta_decl]
+        pub enum $enum_name { $( $variant, )* }
+
+        impl $enum_name {
+            pub fn iter() -> ::std::slice::Iter<'static, $enum_name> {
+                const ENUM_VARIANTS: &'static [$enum_name] = &[ $( $variant, )* ];
+                ENUM_VARIANTS.iter()
+            }
+
+            pub fn filename_texture(&self) -> String {
+                match *self {
+                    $( $variant => String::from(stringify!($variant)) + ".png",)*
+                }
+            }
+        }
+    )
+}
+
 iterable_enum!{
     TileType {
-        #![derive(PartialEq, Clone, Copy)]
+        #![derive(PartialEq, Clone, Copy, Eq, Hash)]
 
-        CircleOne, CircleTwo, CircleThree, CircleFour, CircleFive,
-        CircleSix, CircleSeven, CircleEight, CircleNine,
+        BallOne, BallTwo, BallThree, BallFour, BallFive,
+        BallSix, BallSeven, BallEight, BallNine,
         BambooOne, BambooTwo, BambooThree, BambooFour, BambooFive,
         BambooSix, BambooSeven, BambooEight, BambooNine,
         CharacterOne, CharacterTwo, CharacterThree, CharacterFour, CharacterFive,
         CharacterSix, CharacterSeven, CharacterEight, CharacterNine,
         WindNorth, WindEast, WindSouth, WindWest,
         DragonRed, DragonGreen, DragonWhite,
-        FlowerPlum, FlowerOrchid, FlowerChrysanthemum, FlowerBamboo,
+        FlowerPlum, FlowerOrchid, FlowerBamboo, FlowerChrysanthemum,
         SeasonSpring, SeasonSummer, SeasonAutumn, SeasonWinter,
     }
 }
@@ -56,15 +81,15 @@ impl TileType {
 impl fmt::Display for TileType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match *self {
-            CircleOne => "o1",
-            CircleTwo => "o2",
-            CircleThree => "o3",
-            CircleFour => "o4",
-            CircleFive => "o5",
-            CircleSix => "o6",
-            CircleSeven => "o7",
-            CircleEight => "o8",
-            CircleNine => "o9",
+            BallOne => "o1",
+            BallTwo => "o2",
+            BallThree => "o3",
+            BallFour => "o4",
+            BallFive => "o5",
+            BallSix => "o6",
+            BallSeven => "o7",
+            BallEight => "o8",
+            BallNine => "o9",
             BambooOne => "b1",
             BambooTwo => "b2",
             BambooThree => "b3",

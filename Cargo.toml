@@ -5,6 +5,7 @@ authors = ["Maarten Bonsema <maarten.bonsema@gmail.com>"]
 
 [dependencies]
 rand = "0.3.11"
+sdl2 = "0.9"
 
-[dependencies.iterable_enum]
-path = "iterable_enum"
+[dependencies.sdl2_image]
+git = "https://github.com/xsleonard/rust-sdl2_image"

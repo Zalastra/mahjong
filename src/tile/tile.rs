@@ -1,6 +1,7 @@
 use std::fmt;
 
 use tile::tile_type::*;
+use sdl2::render::Texture;
 
 // NOTE might need to moved to a different file based on how we implement the board/tile structure
 #[derive(PartialEq, Clone)]
@@ -12,12 +13,13 @@ pub struct TilePosition {
 
 pub struct Tile {
     pub position: TilePosition,
+    pub texture: Texture,
     kind: TileType,
     positions: Vec<TilePosition>,
 }
 
 impl Tile {
-    pub fn new(position: TilePosition, kind: TileType) -> Tile {
+    pub fn new(position: TilePosition, texture: Texture, kind: TileType) -> Tile {
         let positions = vec![position.clone(),
                              TilePosition {x: position.x + 1, y: position.y, z: position.z },
                              TilePosition {x: position.x, y: position.y + 1, z: position.z },
@@ -25,6 +27,7 @@ impl Tile {
 
         Tile {
             position: position,
+            texture: texture,
             positions: positions,
             kind: kind,
         }
