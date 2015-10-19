@@ -86,17 +86,33 @@ impl<'a> App<'a> {
             }
         });
 
+        let mut mouse_x = 0;
+        let mut mouse_y = 0;
+
         while running {
             for event in self.event_pump.poll_iter() {
                 use sdl2::event::Event;
+                use sdl2::mouse::Mouse;
 
                 match event {
                     Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                         running = false
                     },
+                    Event::MouseButtonDown { mouse_btn: Mouse::Left, x, y, .. } => {
+                        mouse_x = x;
+                        mouse_y = y;
+                    },
+                    Event::MouseButtonUp { mouse_btn: Mouse::Left, .. } => {
+                        self.board.select_tile(mouse_x, mouse_y);
+                    },
                     _ => {}
                 }
             }
+
+            self.renderer.set_draw_color(Color::RGB(0, 0, 0));
+            self.renderer.clear();
+            self.board.render(&mut self.renderer);
+            self.renderer.present();
 
             if let Ok(tile_match) = match_receiver.try_recv() {
                 self.board.make_match(tile_match.position1, tile_match.position2);
@@ -104,10 +120,7 @@ impl<'a> App<'a> {
                 println!("{}", self.board);
             }
 
-            self.renderer.set_draw_color(Color::RGB(0, 0, 0));
-            self.renderer.clear();
-            self.board.render(&mut self.renderer);
-            self.renderer.present();
+            thread::sleep_ms(10);
         }
     }
 }

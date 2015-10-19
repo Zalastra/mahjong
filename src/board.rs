@@ -14,6 +14,7 @@ pub struct Board {
     played: Vec<usize>,
     blocking_data: Vec<TileBlockingData>,
     reachable_tiles: Vec<usize>,
+    selected_tile: Option<usize>,
 }
 
 pub struct BoardPosition {
@@ -54,20 +55,69 @@ impl Board {
             played: Vec::new(),
             blocking_data: blocking_data,
             reachable_tiles: Vec::new(),
+            selected_tile: None,
         };
 
         board.update_blocked_by_data();
 
         board.set_reachable_tiles();
+        for tile in board.reachable_tiles.iter() {
+            println!("{}", tile);
+        }
 
         board
+    }
+
+    pub fn select_tile(&mut self, mouse_x: i32, mouse_y: i32) {
+        let mut tile_index = None;
+
+        for (index, tile) in self.tiles.iter().enumerate() {
+            if self.played.contains(&index) || !self.reachable_tiles.contains(&index) { continue; }
+
+            let x = tile.position.x as i32 * 23 + tile.position.z as i32 * 5 + 15;
+            let y = tile.position.y as i32 * 29 - tile.position.z as i32 * 5 + 15;
+
+            if mouse_x >= x && mouse_x <= x + 46 && mouse_y >= y && mouse_y <= y + 57 {
+                tile_index = Some(index);
+                break;
+            }
+        }
+
+        if let Some(tile_index) = tile_index {
+            match self.selected_tile {
+                Some(tile_index2) => {
+                    if tile_index == tile_index2 {
+                        self.selected_tile = None;
+                        return;
+                    }
+                    {
+                        let tile1 = &self.tiles[tile_index];
+                        let tile2 = &self.tiles[tile_index2];
+
+                        if !Tile::matches(&tile1, &tile2) {
+                            return;
+                        }
+                    }
+                    self.played.push(tile_index);
+                    self.played.push(tile_index2);
+                    self.update_blocked_by_data();
+                    self.set_reachable_tiles();
+                    self.selected_tile = None;
+                },
+                None => {
+                    self.selected_tile = Some(tile_index);
+                }
+            }
+        }
     }
 
     pub fn render(&self, renderer: &mut Renderer) {
         for (index, tile) in self.tiles.iter().enumerate() {
             if self.played.contains(&index) { continue; }
+
             let x = tile.position.x as i32 * 23 + tile.position.z as i32 * 5 + 15;
             let y = tile.position.y as i32 * 29 - tile.position.z as i32 * 5 + 15;
+
             renderer.copy(&tile.texture, None, Rect::new(x, y, 46, 57).unwrap())
         }
     }
@@ -162,7 +212,7 @@ impl Board {
             let index = data.tile_index;
             let blocked_by_verticaly =
                 self.blocking_data.iter()
-                                  .filter(|&data| self.played.contains(&data.tile_index))
+                                  .filter(|&data| !self.played.contains(&data.tile_index))
                                   .fold(0, |count, data| {
                                       if data.blocking_verticaly.contains(&index) {
                                           count + 1
@@ -173,7 +223,7 @@ impl Board {
 
             let blocked_by_left =
                 self.blocking_data.iter()
-                                  .filter(|&data| self.played.contains(&data.tile_index))
+                                  .filter(|&data| !self.played.contains(&data.tile_index))
                                   .fold(0, |count, data| {
                                       if data.blocking_left.contains(&index) {
                                           count + 1
@@ -184,7 +234,7 @@ impl Board {
 
             let blocked_by_right =
                 self.blocking_data.iter()
-                                  .filter(|&data| self.played.contains(&data.tile_index))
+                                  .filter(|&data| !self.played.contains(&data.tile_index))
                                   .fold(0, |count, data| {
                                       if data.blocking_right.contains(&index) {
                                           count + 1
