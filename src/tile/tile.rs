@@ -3,7 +3,6 @@ use std::fmt;
 use tile::tile_type::*;
 use sdl2::render::Texture;
 
-// NOTE might need to moved to a different file based on how we implement the board/tile structure
 #[derive(PartialEq, Clone)]
 pub struct TilePosition {
     pub x: u8,
@@ -37,14 +36,15 @@ impl Tile {
         self.kind.matches(&other.kind)
     }
 
-    pub fn is_on_position(&self, other_position: TilePosition) -> bool {
+    pub fn is_on_position(&self, other_position: &TilePosition) -> bool {
         for position in self.positions.iter() {
-            if *position == other_position { return true }
+            if *position == *other_position { return true }
         }
         false
     }
 }
 
+// TODO: should be removed if we dont need console printing for debugging
 impl fmt::Display for Tile {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}|{}", self.position.z, self.kind)
