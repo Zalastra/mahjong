@@ -1,9 +1,12 @@
 use std::cell::Cell;
 use std::fmt;
 use std::fmt::Write;
+use std::path::Path;
 
-use sdl2::render::{Renderer};
+use sdl2::render::{Renderer, Texture};
 use sdl2::rect::Rect;
+
+use sdl2_image::LoadTexture;
 
 use tile::*;
 
@@ -15,6 +18,8 @@ pub struct Board {
     blocking_data: Vec<TileBlockingData>,
     reachable_tiles: Vec<usize>,
     selected_tile: Option<usize>,
+    side_texture: Texture,
+    bottom_texture: Texture,
 }
 
 struct TileBlockingData {
@@ -27,14 +32,14 @@ struct TileBlockingData {
     pub blocked_by_right: Cell<u8>,
 }
 
-enum Blocking {
+enum BlockingDirection {
     Verticaly, Right, Left,
 }
 
-use self::Blocking::{Left, Right, Verticaly};
+use self::BlockingDirection::{Left, Right, Verticaly};
 
 impl TileBlockingData {
-    pub fn get_blocking(&self, blocking: Blocking) -> &Vec<usize> {
+    fn get_blocking(&self, blocking: BlockingDirection) -> &Vec<usize> {
         match blocking {
             Left => &self.blocking_left,
             Right => &self.blocking_right,
@@ -107,7 +112,20 @@ impl Board {
             tiles.push(tile);
         }
 
+        tiles.sort_by(|a, b| {
+            use std::cmp::Ordering::*;
+            if a.position.z < b.position.z { Less }
+            else if a.position.z > b.position.z { Greater }
+            else if a.position.x > b.position.x { Less }
+            else if a.position.x < b.position.x { Greater }
+            else if a.position.y < b.position.y { Less }
+            else { Greater }
+        });
+
         let blocking_data = generate_blocking_data(&tiles);
+
+        let side_texture = renderer.load_texture(Path::new("img/TileSide.png")).expect("error loading side texture");
+        let bottom_texture = renderer.load_texture(Path::new("img/TileBottom.png")).expect("error loading bottom texture");
 
         let mut board = Board {
             height: height,
@@ -117,6 +135,8 @@ impl Board {
             blocking_data: blocking_data,
             reachable_tiles: Vec::new(),
             selected_tile: None,
+            side_texture: side_texture,
+            bottom_texture: bottom_texture,
         };
 
         board.update_blocked_by_data();
@@ -179,7 +199,10 @@ impl Board {
             let x = tile.position.x as i32 * 23 + tile.position.z as i32 * 5 + 15;
             let y = tile.position.y as i32 * 29 - tile.position.z as i32 * 5 + 15;
 
-            renderer.copy(&tile.texture, None, Rect::new(x, y, 46, 57).unwrap())
+            renderer.copy(&self.side_texture, None, Rect::new(x - 5, y, 5, 62).unwrap());
+            renderer.copy(&self.bottom_texture, None, Rect::new(x, y + 57, 46, 5).unwrap());
+
+            renderer.copy(&tile.texture, None, Rect::new(x, y, 46, 57).unwrap());
         }
     }
 
@@ -188,12 +211,12 @@ impl Board {
             let index = data.tile_index;
 
             macro_rules! amount_blocked_by {
-                ( $b:expr ) => {
+                ( $blocking_direction:expr ) => {
                     self.blocking_data
                         .iter()
                         .filter(|&data| !self.played.contains(&data.tile_index))
                         .fold(0, |count, data| {
-                            if data.get_blocking($b).contains(&index) {
+                            if data.get_blocking($blocking_direction).contains(&index) {
                                 count + 1
                             } else {
                                 count
