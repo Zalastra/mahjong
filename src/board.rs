@@ -139,35 +139,25 @@ impl Board {
             bottom_texture: bottom_texture,
         };
 
-        board.update_blocked_by_data();
-        board.set_reachable_tiles();
+        board.update_meta_data();
 
         board
     }
 
     pub fn select_tile(&mut self, mouse_x: i32, mouse_y: i32) {
-        let mut tile_index = None;
-
-        for (index, tile) in self.tiles.iter().enumerate() {
-            if self.played.contains(&index) || !self.reachable_tiles.contains(&index) { continue; }
-
-            let x = tile.position.x as i32 * 23 + tile.position.z as i32 * 5 + 15;
-            let y = tile.position.y as i32 * 29 - tile.position.z as i32 * 5 + 15;
-
-            if mouse_x >= x && mouse_x <= x + 46 && mouse_y >= y && mouse_y <= y + 57 {
-                tile_index = Some(index);
-                break;
-            }
-        }
+        let tile_index = self.find_tile_index_by_coord(mouse_x, mouse_y);
 
         if let Some(tile_index) = tile_index {
             match self.selected_tile {
                 Some(tile_index2) => {
+                    // deselect tile
                     if tile_index == tile_index2 {
                         self.tiles[tile_index2].texture.set_color_mod(255, 255, 255);
                         self.selected_tile = None;
                         return;
                     }
+
+                    // test tile match
                     {
                         let tile1 = &self.tiles[tile_index];
                         let tile2 = &self.tiles[tile_index2];
@@ -176,10 +166,11 @@ impl Board {
                             return;
                         }
                     }
+
+                    // valid match
                     self.played.push(tile_index);
                     self.played.push(tile_index2);
-                    self.update_blocked_by_data();
-                    self.set_reachable_tiles();
+                    self.update_meta_data();
 
                     self.tiles[tile_index2].texture.set_color_mod(255, 255, 255);
                     self.selected_tile = None;
@@ -192,11 +183,17 @@ impl Board {
         }
     }
 
+    pub fn undo(&mut self) {
+        self.played.pop();
+        self.played.pop();
+        self.update_meta_data();
+    }
+
     pub fn render(&mut self, renderer: &mut Renderer) {
         for (index, tile) in self.tiles.iter().enumerate() {
             if self.played.contains(&index) { continue; }
 
-            let x = tile.position.x as i32 * 23 + tile.position.z as i32 * 5 + 15;
+            let x = tile.position.x as i32 * 23 + tile.position.z as i32 * 5 + 20;
             let y = tile.position.y as i32 * 29 - tile.position.z as i32 * 5 + 15;
 
             renderer.copy(&self.side_texture, None, Rect::new(x - 5, y, 5, 62).unwrap());
@@ -204,6 +201,25 @@ impl Board {
 
             renderer.copy(&tile.texture, None, Rect::new(x, y, 46, 57).unwrap());
         }
+    }
+
+    fn find_tile_index_by_coord(&self, x: i32, y: i32) -> Option<usize> {
+        for (index, tile) in self.tiles.iter().enumerate().rev() {
+            if self.played.contains(&index) || !self.reachable_tiles.contains(&index) { continue; }
+
+            let tile_x = tile.position.x as i32 * 23 + tile.position.z as i32 * 5 + 15;
+            let tile_y = tile.position.y as i32 * 29 - tile.position.z as i32 * 5 + 15;
+
+            if x >= tile_x && x <= tile_x + 46 && y >= tile_y && y <= tile_y + 57 {
+                return Some(index);
+            }
+        }
+        None
+    }
+
+    fn update_meta_data(&mut self) {
+        self.update_blocked_by_data();
+        self.set_reachable_tiles();
     }
 
     fn update_blocked_by_data(&self) {
@@ -267,7 +283,7 @@ impl Board {
 }
 
 // TODO: should be removed if we dont need console printing for debugging
-impl fmt::Display for Board {
+impl fmt::Debug for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut output = String::new();
         output.push_str("   ");
