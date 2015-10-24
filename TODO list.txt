@@ -1,0 +1,17 @@
+game functionality:
+  - provide hints of available matches
+  - victory / game over
+
+interface:
+  - new game button
+  - undo button
+  - hint button
+
+graphics:
+  - background
+  - higher res tiles
+
+improvements:
+  - create board that's guaranteed to be completable
+  - 3d version
+  - multiple render paths to support opengl 1 and newer versions
