@@ -72,7 +72,8 @@ impl<'a> App<'a> {
                         if cfg!(debug_assertions) { println!("{:?}", self.board); }
                     },
                     Event::Window { win_event_id, .. } => {
-                        // NOTE: ugly hack to fix SDL2 bug
+                        // NOTE: ugly hack to fix SDL2 bug occurs when maximizing a previously
+                        //       maximized window that was minimized to the taskbar.
                         if win_event_id == FocusGained {
                             let mut window = self.renderer.window_mut().unwrap();
                             if window.window_flags() & 0x80 == 0x80 {

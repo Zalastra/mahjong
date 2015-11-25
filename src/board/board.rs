@@ -8,7 +8,8 @@ use sdl2::rect::Rect;
 
 use sdl2_image::LoadTexture;
 
-use tile::*;
+use board::tile::{Position, Tile};
+use board::factory::TileFactory;
 
 pub struct Board {
     height: u8,
@@ -54,7 +55,7 @@ fn generate_blocking_data(tiles: &Vec<Tile>) -> Vec<TileBlockingData> {
             tiles.iter()
                  .enumerate()
                  .filter(|&(_, other_tile)| {
-                     let positions = [ $( TilePosition { x: $x, y: $y, z: $z }, )+ ];
+                     let positions = [ $( Position::new($x, $y, $z), )+ ];
                      positions.iter().any(|position| other_tile.is_on_position(position))
                  })
                  .map(|(index, _)| index)
@@ -65,23 +66,23 @@ fn generate_blocking_data(tiles: &Vec<Tile>) -> Vec<TileBlockingData> {
     let mut blocking_data = Vec::new();
     for (index, tile) in tiles.iter().enumerate() {
         let position = &tile.position;
-        let blocking_verticaly = match position.z {
+        let blocking_verticaly = match position.z() {
             0 => Vec::new(),
-            _ => blocking_tiles_on![{position.x,     position.y,     position.z - 1},
-                                    {position.x + 1, position.y,     position.z - 1},
-                                    {position.x,     position.y + 1, position.z - 1},
-                                    {position.x + 1, position.y + 1, position.z - 1}]
+            _ => blocking_tiles_on![{position.x(),     position.y(),     position.z() - 1},
+                                    {position.x() + 1, position.y(),     position.z() - 1},
+                                    {position.x(),     position.y() + 1, position.z() - 1},
+                                    {position.x() + 1, position.y() + 1, position.z() - 1}]
         };
 
-        let blocking_left = match position.x {
+        let blocking_left = match position.x() {
             0 => Vec::new(),
-            _ => blocking_tiles_on![{position.x - 1, position.y,     position.z},
-                                    {position.x - 1, position.y + 1, position.z}]
+            _ => blocking_tiles_on![{position.x() - 1, position.y(),     position.z()},
+                                    {position.x() - 1, position.y() + 1, position.z()}]
         };
 
         let blocking_right =
-            blocking_tiles_on![{position.x + 2, position.y,     position.z},
-                               {position.x + 2, position.y + 1, position.z}];
+            blocking_tiles_on![{position.x() + 2, position.y(),     position.z()},
+                               {position.x() + 2, position.y() + 1, position.z()}];
 
         blocking_data.push(TileBlockingData {
             tile_index: index,
@@ -103,22 +104,22 @@ impl Board {
         let mut tiles = Vec::new();
         let (mut height, mut width) = (0, 0);
 
-        let mut tile_factory = TileFactory::new(renderer);
+        let mut tile_factory = TileFactory::new();
 
-        while let Some(tile) = tile_factory.get_random_tile() {
-            if tile.position.x >= width { width = tile.position.x + 1; }
-            if tile.position.y >= height { height = tile.position.y + 1; }
+        while let Some(tile) = tile_factory.get_tile(&renderer) {
+            if tile.position.x() >= width { width = tile.position.x() + 1; }
+            if tile.position.y() >= height { height = tile.position.y() + 1; }
 
             tiles.push(tile);
         }
 
         tiles.sort_by(|a, b| {
             use std::cmp::Ordering::*;
-            if a.position.z < b.position.z { Less }
-            else if a.position.z > b.position.z { Greater }
-            else if a.position.x > b.position.x { Less }
-            else if a.position.x < b.position.x { Greater }
-            else if a.position.y < b.position.y { Less }
+            if a.position.z() < b.position.z() { Less }
+            else if a.position.z() > b.position.z() { Greater }
+            else if a.position.x() > b.position.x() { Less }
+            else if a.position.x() < b.position.x() { Greater }
+            else if a.position.y() < b.position.y() { Less }
             else { Greater }
         });
 
@@ -193,8 +194,8 @@ impl Board {
         for (index, tile) in self.tiles.iter().enumerate() {
             if self.played.contains(&index) { continue; }
 
-            let x = tile.position.x as i32 * 23 + tile.position.z as i32 * 5 + 20;
-            let y = tile.position.y as i32 * 29 - tile.position.z as i32 * 5 + 15;
+            let x = tile.position.x() as i32 * 23 + tile.position.z() as i32 * 5 + 20;
+            let y = tile.position.y() as i32 * 29 - tile.position.z() as i32 * 5 + 15;
 
             renderer.copy(&self.side_texture, None, Rect::new(x - 5, y, 5, 62).unwrap());
             renderer.copy(&self.bottom_texture, None, Rect::new(x, y + 57, 46, 5).unwrap());
@@ -207,8 +208,8 @@ impl Board {
         for (index, tile) in self.tiles.iter().enumerate().rev() {
             if self.played.contains(&index) || !self.reachable_tiles.contains(&index) { continue; }
 
-            let tile_x = tile.position.x as i32 * 23 + tile.position.z as i32 * 5 + 15;
-            let tile_y = tile.position.y as i32 * 29 - tile.position.z as i32 * 5 + 15;
+            let tile_x = tile.position.x() as i32 * 23 + tile.position.z() as i32 * 5 + 15;
+            let tile_y = tile.position.y() as i32 * 29 - tile.position.z() as i32 * 5 + 15;
 
             if x >= tile_x && x <= tile_x + 46 && y >= tile_y && y <= tile_y + 57 {
                 return Some(index);
@@ -266,14 +267,14 @@ impl Board {
             .iter()
             .enumerate()
             .filter(|&(index, tile)| {
-                tile.position.x == x &&
-                tile.position.y == y &&
+                tile.position.x() == x &&
+                tile.position.y() == y &&
                 !self.played.contains(&index)
             })
             .fold(None, |top_tile_index, (index, tile)| {
                 if let Some(index) = top_tile_index {
                     let current_top_tile: &Tile = &self.tiles[index];
-                    if current_top_tile.position.z > tile.position.z {
+                    if current_top_tile.position.z() > tile.position.z() {
                         return top_tile_index
                     }
                 }
