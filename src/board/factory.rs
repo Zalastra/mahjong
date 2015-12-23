@@ -52,6 +52,8 @@ pub struct TileFactory {
     remaining_tile_types: Vec<TileType>,
     available_positions: Vec<TilePosition>,
     next_tile: Option<Tile>,
+    tile_nodes: Vec<Rc<TileNode>>,
+    available_nodes: Vec<Rc<TileNode>>,
 }
 
 impl TileFactory {
@@ -125,26 +127,15 @@ impl TileFactory {
             }
         }
 
-        let starting_positions = Vec::<Rc<TilePosition>>::new();
-        for node_chain in node_chains.iter() {
-            let mut rows = HashMap::new();
-            node_chain
-                .borrow()
-                .iter()
-                .filter(|&node| {
-                    node.position.z() == 0
-                })
-                .inspect(|&node| {
-                    let count = rows.entry(node.position.y()).or_insert(0);
-                    *count += 1;
-                })
-                .last();
-        }
+        let tile_nodes = create_tile_nodes();
+        let starting_tiles = get_starting_tiles(&tile_nodes);
 
         TileFactory {
             remaining_tile_types: tile_types,
             available_positions: tile_positions,
             next_tile: None,
+            tile_nodes: tile_nodes,
+            available_nodes: starting_tiles,
         }
     }
 
@@ -153,6 +144,26 @@ impl TileFactory {
         match opt_tile {
             Some(tile) => Some(tile),
             None => {
+                if self.available_nodes.is_empty() { return None; }
+
+                let mut rng = rand::thread_rng();
+
+                let tile_count = self.available_nodes.len();
+
+                let random_index = Range::new(0, tile_count).ind_sample(&mut rng);
+                let node1 = self.available_nodes.swap_remove(random_index);
+
+                let random_index = Range::new(0, tile_count - 1).ind_sample(&mut rng);
+                let node2 = self.available_nodes.swap_remove(random_index);
+
+                let random_index = Range::new(0, tile_count / 2).ind_sample(&mut rng) * 2;
+                let tile_type1 = self.remaining_tile_types.remove(random_index);
+                let tile_type2 = self.remaining_tile_types.remove(random_index);
+
+                self.next_tile = Some(Tile::new(node1.position.clone(), tile_type1, renderer));
+
+                Some(Tile::new(node2.position.clone(), tile_type2, renderer))
+                /*
                 let tile_count = self.remaining_tile_types.len();
                 if self.remaining_tile_types.is_empty() { return None }
 
@@ -168,6 +179,7 @@ impl TileFactory {
 
                 self.next_tile = Some(Tile::new(tile_position2, tile_type2, renderer));
                 Some(Tile::new(tile_position1, tile_type1, renderer))
+                */
             }
         }
     }
@@ -212,21 +224,32 @@ fn get_starting_tiles(nodes: &Vec<Rc<TileNode>>) -> Vec<Rc<TileNode>> {
             starting_positions.push(graph[random_index].clone());
         } else {
             // TODO: currently assumes row count to be 3 if not 1, make the code not depend on this to support different board setups
-            let mut iters = vec![];
-            return graph.iter().filter(|&node| node.position.y() == *rows.iter().max().unwrap());
-            //iters.push(graph.iter().filter(|&node| node.position.y() == *rows.iter().min().unwrap()));
-            for iter in iters.iter_mut() {
-                let random_index = Range::new(0, iter.by_ref().count()).ind_sample(&mut rng);
-                let (_, node) = iter.fold((0, None), |(index, _), node| {
-                    let node = if index == random_index {
-                        Some(node.clone())
-                    } else {
-                        None
-                    };
-                    (index + 1, node)
-                });
-                starting_positions.push(node.unwrap());
-            }
+
+            let mut top_row_iter = graph.iter()
+                .filter(|&node| node.position.y() == *rows.iter().min().unwrap());
+            let random_index = Range::new(0, top_row_iter.by_ref().count()).ind_sample(&mut rng);
+            let (_, node) = top_row_iter.fold((0, None), |(index, _), node| {
+                let node = if index == random_index {
+                    Some(node.clone())
+                } else {
+                    None
+                };
+                (index + 1, node)
+            });
+            starting_positions.push(node.unwrap());
+
+            let mut bottom_row_iter = graph.iter()
+                .filter(|&node| node.position.y() == *rows.iter().max().unwrap());
+            let random_index = Range::new(0, bottom_row_iter.by_ref().count()).ind_sample(&mut rng);
+            let (_, node) = bottom_row_iter.fold((0, None), |(index, _), node| {
+                let node = if index == random_index {
+                    Some(node.clone())
+                } else {
+                    None
+                };
+                (index + 1, node)
+            });
+            starting_positions.push(node.unwrap());
         }
     }
 
