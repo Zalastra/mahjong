@@ -1,4 +1,5 @@
 use std::thread;
+use std::time::Duration;
 
 use sdl2::{self, EventPump};
 use sdl2::pixels::Color;
@@ -91,7 +92,7 @@ impl<'a> App<'a> {
             self.board.render(&mut self.renderer);
             self.renderer.present();
 
-            thread::sleep_ms(10);
+            thread::sleep(Duration::from_millis(10));
         }
     }
 }
