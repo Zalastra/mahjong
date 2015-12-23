@@ -2,10 +2,8 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::hash_set::HashSet;
-use std::collections::hash_map::HashMap;
 use std::hash::{Hash, Hasher};
 use std::mem;
-use std::ops::Deref;
 use std::rc::Rc;
 
 use sdl2::render::Renderer;
@@ -54,6 +52,7 @@ pub struct TileFactory {
     next_tile: Option<Tile>,
     tile_nodes: Vec<Rc<TileNode>>,
     available_nodes: Vec<Rc<TileNode>>,
+    used_nodes: Vec<Rc<TileNode>>,
 }
 
 impl TileFactory {
@@ -136,6 +135,7 @@ impl TileFactory {
             next_tile: None,
             tile_nodes: tile_nodes,
             available_nodes: starting_tiles,
+            used_nodes: vec![],
         }
     }
 
@@ -148,38 +148,34 @@ impl TileFactory {
 
                 let mut rng = rand::thread_rng();
 
-                let tile_count = self.available_nodes.len();
-
-                let random_index = Range::new(0, tile_count).ind_sample(&mut rng);
-                let node1 = self.available_nodes.swap_remove(random_index);
-
-                let random_index = Range::new(0, tile_count - 1).ind_sample(&mut rng);
-                let node2 = self.available_nodes.swap_remove(random_index);
-
-                let random_index = Range::new(0, tile_count / 2).ind_sample(&mut rng) * 2;
+                let random_index = Range::new(0, self.remaining_tile_types.len() / 2).ind_sample(&mut rng) * 2;
                 let tile_type1 = self.remaining_tile_types.remove(random_index);
                 let tile_type2 = self.remaining_tile_types.remove(random_index);
+
+                let random_index = Range::new(0, self.available_nodes.len()).ind_sample(&mut rng);
+                let node1 = self.available_nodes.swap_remove(random_index);
+                self.used_nodes.push(node1.clone());
+
+                let random_index = Range::new(0, self.available_nodes.len()).ind_sample(&mut rng);
+                let node2 = self.available_nodes.swap_remove(random_index);
+                self.used_nodes.push(node2.clone());
+
+                for neighbour in node1.neighbours.borrow().iter() {
+                    let node = &neighbour.tile;
+                    if !self.available_nodes.contains(node) && !self.used_nodes.contains(node) {
+                        self.available_nodes.push(node.clone());
+                    }
+                }
+                for neighbour in node2.neighbours.borrow().iter() {
+                    let node = &neighbour.tile;
+                    if !self.available_nodes.contains(node) && !self.used_nodes.contains(node) {
+                        self.available_nodes.push(node.clone());
+                    }
+                }
 
                 self.next_tile = Some(Tile::new(node1.position.clone(), tile_type1, renderer));
 
                 Some(Tile::new(node2.position.clone(), tile_type2, renderer))
-                /*
-                let tile_count = self.remaining_tile_types.len();
-                if self.remaining_tile_types.is_empty() { return None }
-
-                let mut rng = rand::thread_rng();
-                let random_index = Range::new(0, tile_count / 2).ind_sample(&mut rng) * 2;
-                let tile_type1 = self.remaining_tile_types.remove(random_index);
-                let tile_type2 = self.remaining_tile_types.remove(random_index);
-
-                let random_index = Range::new(0, tile_count).ind_sample(&mut rng);
-                let tile_position1 = self.available_positions.remove(random_index);
-                let random_index = Range::new(0, tile_count-1).ind_sample(&mut rng);
-                let tile_position2 = self.available_positions.remove(random_index);
-
-                self.next_tile = Some(Tile::new(tile_position2, tile_type2, renderer));
-                Some(Tile::new(tile_position1, tile_type1, renderer))
-                */
             }
         }
     }
@@ -201,13 +197,14 @@ fn get_starting_tiles(nodes: &Vec<Rc<TileNode>>) -> Vec<Rc<TileNode>> {
                     traverse_nodes(&neighbour.tile, visited, graph);
                 }
             }
-            traverse_nodes(&node, &mut visited_nodes, &mut ground_node_graphs.last_mut().unwrap());
+            traverse_nodes(&node, &mut visited_nodes, ground_node_graphs.last_mut().unwrap());
         }
     }
 
     let mut rng = rand::thread_rng();
     let mut starting_positions = Vec::<Rc<TileNode>>::new();
     for graph in ground_node_graphs.iter() {
+        println!("{}", graph.len()); // TODO: remove after problem is fixed
         let rows: HashSet<u8> = graph
             .iter()
             .map(|node| {
@@ -219,37 +216,37 @@ fn get_starting_tiles(nodes: &Vec<Rc<TileNode>>) -> Vec<Rc<TileNode>> {
             })
             .into_inner();
 
-        if rows.len() == 1 {
-            let random_index = Range::new(0, graph.len()).ind_sample(&mut rng);
-            starting_positions.push(graph[random_index].clone());
-        } else {
-            // TODO: currently assumes row count to be 3 if not 1, make the code not depend on this to support different board setups
+        match rows.len() {
+            0 => { println!("WTF!"); }, // TODO: this should never happen, but does. Investigate why
+            1 => {
+                let random_index = Range::new(0, graph.len()).ind_sample(&mut rng);
+                starting_positions.push(graph[random_index].clone());
+            },
+            _ => {
+                // TODO: currently assumes row count to be 3 if not 1, make the code not depend on this to support different board setups
 
-            let mut top_row_iter = graph.iter()
-                .filter(|&node| node.position.y() == *rows.iter().min().unwrap());
-            let random_index = Range::new(0, top_row_iter.by_ref().count()).ind_sample(&mut rng);
-            let (_, node) = top_row_iter.fold((0, None), |(index, _), node| {
-                let node = if index == random_index {
-                    Some(node.clone())
-                } else {
-                    None
-                };
-                (index + 1, node)
-            });
-            starting_positions.push(node.unwrap());
+                let mut add_random_node_from_row = |row| {
+                    let count = graph.iter()
+                        .filter(|&node| node.position.y() == row)
+                        .count();
+                    let random_index = Range::new(0, count).ind_sample(&mut rng);
+                    let (_, node) = graph.iter()
+                        .filter(|&node| node.position.y() == row)
+                        .enumerate()
+                        .filter(|&(index, _)| index == random_index)
+                        .next()
+                        .unwrap();
 
-            let mut bottom_row_iter = graph.iter()
-                .filter(|&node| node.position.y() == *rows.iter().max().unwrap());
-            let random_index = Range::new(0, bottom_row_iter.by_ref().count()).ind_sample(&mut rng);
-            let (_, node) = bottom_row_iter.fold((0, None), |(index, _), node| {
-                let node = if index == random_index {
-                    Some(node.clone())
-                } else {
-                    None
+                    starting_positions.push(node.clone());
                 };
-                (index + 1, node)
-            });
-            starting_positions.push(node.unwrap());
+
+                let row = *rows.iter().min().unwrap();
+                add_random_node_from_row(row);
+
+                let row = *rows.iter().max().unwrap();
+                add_random_node_from_row(row);
+
+            },
         }
     }
 
@@ -305,14 +302,6 @@ impl TileNeighbour {
         }
     }
 }
-
-/*impl Deref for TileNeighbour {
-    type Target = Rc<TileNode>;
-
-    fn deref<'a>(&'a self) -> &'a Rc<TileNode> {
-        &self.tile
-    }
-}*/
 
 struct TileNode {
     pub position: TilePosition,

@@ -12,6 +12,5 @@ graphics:
   - higher res tiles
 
 improvements:
-  - create board that's guaranteed to be completable
   - 3d version
   - multiple render paths to support opengl 1 and newer versions
