@@ -9,7 +9,7 @@ use sdl2::rect::Rect;
 use sdl2_image::LoadTexture;
 
 use board::tile::{Position, Tile};
-use board::factory::TileFactory;
+use board::factory::{TileFactory, FactoryError};
 
 pub struct Board {
     height: u8,
@@ -104,13 +104,34 @@ impl Board {
         let mut tiles = Vec::new();
         let (mut height, mut width) = (0, 0);
 
-        let mut tile_factory = TileFactory::new();
+        // NOTE: There is a (good) chance that valid board creation fails, it's easy to detect
+        //       but hard to prevent so we just keep trying untill we have a valid board
+        let mut done = false;
+        while !done {
+            let mut tile_factory = TileFactory::new();
 
-        while let Some(tile) = tile_factory.get_tile(&renderer) {
-            if tile.position.x() >= width { width = tile.position.x() + 1; }
-            if tile.position.y() >= height { height = tile.position.y() + 1; }
+            loop {
+                let two_tiles = tile_factory.get_tile(&renderer);
+                if let Ok((tile1, tile2)) = two_tiles {
+                    if tile1.position.x() >= width { width = tile1.position.x() + 1; }
+                    if tile1.position.y() >= height { height = tile1.position.y() + 1; }
 
-            tiles.push(tile);
+                    tiles.push(tile1);
+
+                    if tile2.position.x() >= width { width = tile2.position.x() + 1; }
+                    if tile2.position.y() >= height { height = tile2.position.y() + 1; }
+
+                    tiles.push(tile2);
+                } else {
+                    match two_tiles.err().unwrap() {
+                        FactoryError::Empty => { done = true; },
+                        FactoryError::InvalidBoard => {},
+                    }
+                    break;
+                }
+            }
+
+            if !done { tiles.clear(); }
         }
 
         tiles.sort_by(|a, b| {

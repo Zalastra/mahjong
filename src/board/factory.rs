@@ -3,7 +3,6 @@
 use std::cell::{Cell, RefCell};
 use std::collections::hash_set::HashSet;
 use std::hash::{Hash, Hasher};
-use std::mem;
 use std::rc::Rc;
 
 use sdl2::render::Renderer;
@@ -139,45 +138,40 @@ impl TileFactory {
         }
     }
 
-    pub fn get_tile(&mut self, renderer: &Renderer) -> Option<Tile> {
-        let opt_tile = mem::replace(&mut self.next_tile, None);
-        match opt_tile {
-            Some(tile) => Some(tile),
-            None => {
-                if self.available_nodes.is_empty() { return None; }
+    pub fn get_tile(&mut self, renderer: &Renderer) -> Result<(Tile, Tile), FactoryError> {
+        if self.available_nodes.is_empty() { return Err(FactoryError::Empty); }
 
-                let mut rng = rand::thread_rng();
+        let mut rng = rand::thread_rng();
 
-                let random_index = Range::new(0, self.remaining_tile_types.len() / 2).ind_sample(&mut rng) * 2;
-                let tile_type1 = self.remaining_tile_types.remove(random_index);
-                let tile_type2 = self.remaining_tile_types.remove(random_index);
+        let random_index = Range::new(0, self.remaining_tile_types.len() / 2).ind_sample(&mut rng) * 2;
+        let tile_type1 = self.remaining_tile_types.remove(random_index);
+        let tile_type2 = self.remaining_tile_types.remove(random_index);
 
-                let random_index = Range::new(0, self.available_nodes.len()).ind_sample(&mut rng);
-                let node1 = self.available_nodes.swap_remove(random_index);
-                self.used_nodes.push(node1.clone());
+        let random_index = Range::new(0, self.available_nodes.len()).ind_sample(&mut rng);
+        let node1 = self.available_nodes.swap_remove(random_index);
+        self.used_nodes.push(node1.clone());
 
-                let random_index = Range::new(0, self.available_nodes.len()).ind_sample(&mut rng);
-                let node2 = self.available_nodes.swap_remove(random_index);
-                self.used_nodes.push(node2.clone());
+        if self.available_nodes.is_empty() { return Err(FactoryError::InvalidBoard); };
+        let random_index = Range::new(0, self.available_nodes.len()).ind_sample(&mut rng);
+        let node2 = self.available_nodes.swap_remove(random_index);
+        self.used_nodes.push(node2.clone());
 
-                for neighbour in node1.neighbours.borrow().iter() {
-                    let node = &neighbour.tile;
-                    if !self.available_nodes.contains(node) && !self.used_nodes.contains(node) {
-                        self.available_nodes.push(node.clone());
-                    }
-                }
-                for neighbour in node2.neighbours.borrow().iter() {
-                    let node = &neighbour.tile;
-                    if !self.available_nodes.contains(node) && !self.used_nodes.contains(node) {
-                        self.available_nodes.push(node.clone());
-                    }
-                }
-
-                self.next_tile = Some(Tile::new(node1.position.clone(), tile_type1, renderer));
-
-                Some(Tile::new(node2.position.clone(), tile_type2, renderer))
+        for neighbour in node1.neighbours.borrow().iter() {
+            let node = &neighbour.tile;
+            if !self.available_nodes.contains(node) && !self.used_nodes.contains(node) {
+                self.available_nodes.push(node.clone());
             }
         }
+        for neighbour in node2.neighbours.borrow().iter() {
+            let node = &neighbour.tile;
+            if !self.available_nodes.contains(node) && !self.used_nodes.contains(node) {
+                self.available_nodes.push(node.clone());
+            }
+        }
+
+        let tile1 = Tile::new(node1.position.clone(), tile_type1, renderer);
+        let tile2 = Tile::new(node2.position.clone(), tile_type2, renderer);
+        Ok((tile1, tile2))
     }
 }
 
@@ -283,6 +277,12 @@ fn create_tile_nodes() -> Vec<Rc<TileNode>> {
         }
     }
     nodes
+}
+
+#[derive(Debug)]
+pub enum FactoryError {
+    Empty,
+    InvalidBoard,
 }
 
 enum Direction {
