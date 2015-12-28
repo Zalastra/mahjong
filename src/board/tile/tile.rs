@@ -34,8 +34,7 @@ impl Tile {
     }
 }
 
-// TODO: should be removed if we dont need console printing for debugging
-impl fmt::Display for Tile {
+impl fmt::Debug for Tile {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}|{}", self.position.z(), self.kind)
     }

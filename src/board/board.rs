@@ -9,11 +9,9 @@ use sdl2::rect::Rect;
 use sdl2_image::LoadTexture;
 
 use board::tile::{Position, Tile};
-use board::factory::{TileFactory, FactoryError};
+use board::factory::create_tile_list;
 
 pub struct Board {
-    height: u8,
-    width: u8,
     tiles: Vec<Tile>,
     played: Vec<usize>,
     blocking_data: Vec<TileBlockingData>,
@@ -95,54 +93,12 @@ fn generate_blocking_data(tiles: &Vec<Tile>) -> Vec<TileBlockingData> {
         })
     }
 
-
     blocking_data
 }
 
 impl Board {
     pub fn new(renderer: &Renderer) -> Board {
-        let mut tiles = Vec::new();
-        let (mut height, mut width) = (0, 0);
-
-        // NOTE: There is a (good) chance that valid board creation fails, it's easy to detect
-        //       but hard to prevent so we just keep trying untill we have a valid board
-        let mut done = false;
-        while !done {
-            let mut tile_factory = TileFactory::new();
-
-            loop {
-                let two_tiles = tile_factory.get_tile(&renderer);
-                if let Ok((tile1, tile2)) = two_tiles {
-                    if tile1.position.x() >= width { width = tile1.position.x() + 1; }
-                    if tile1.position.y() >= height { height = tile1.position.y() + 1; }
-
-                    tiles.push(tile1);
-
-                    if tile2.position.x() >= width { width = tile2.position.x() + 1; }
-                    if tile2.position.y() >= height { height = tile2.position.y() + 1; }
-
-                    tiles.push(tile2);
-                } else {
-                    match two_tiles.err().unwrap() {
-                        FactoryError::Empty => { done = true; },
-                        FactoryError::InvalidBoard => {},
-                    }
-                    break;
-                }
-            }
-
-            if !done { tiles.clear(); }
-        }
-
-        tiles.sort_by(|a, b| {
-            use std::cmp::Ordering::*;
-            if a.position.z() < b.position.z() { Less }
-            else if a.position.z() > b.position.z() { Greater }
-            else if a.position.x() > b.position.x() { Less }
-            else if a.position.x() < b.position.x() { Greater }
-            else if a.position.y() < b.position.y() { Less }
-            else { Greater }
-        });
+        let tiles = create_tile_list(renderer);
 
         let blocking_data = generate_blocking_data(&tiles);
 
@@ -150,8 +106,6 @@ impl Board {
         let bottom_texture = renderer.load_texture(Path::new("img/TileBottom.png")).expect("error loading bottom texture");
 
         let mut board = Board {
-            height: height,
-            width: width,
             tiles: tiles,
             played: Vec::new(),
             blocking_data: blocking_data,
@@ -304,30 +258,31 @@ impl Board {
     }
 }
 
-// TODO: should be removed if we dont need console printing for debugging
 impl fmt::Debug for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut output = String::new();
-        output.push_str("   ");
-        for column in 0..self.width {
-            output.push_str(&format!("{: >3} ", column));
+        let width = self.tiles.iter().map(|tile| tile.position.x()).max().unwrap();
+        let height = self.tiles.iter().map(|tile| tile.position.y()).max().unwrap();
+
+        try!(write!(f, "   "));
+        for column in 0..width {
+            try!(write!(f, "{: >3} ", column));
         }
-        output.push('\n');
-        for _ in 0..self.width+1 {
-            output.push_str("----");
+        try!(write!(f, "\n"));
+        for _ in 0..width+1 {
+            try!(write!(f, "----"));
         }
-        output.push('\n');
-        for row in 0..self.height {
-            output.push_str(&format!("{: >2}|", row));
-            for column in 0..self.width {
+        try!(write!(f, "\n"));
+        for row in 0..height {
+            try!(write!(f, "{: >2}|", row));
+            for column in 0..width {
                 if let Some(index) = self.get_top_tile_index_at_position(column, row) {
-                    output.push_str(&format!("{}", self.tiles[index]));
+                    try!(write!(f, "{:?}", self.tiles[index]));
                 } else {
-                    output.push_str("    ");
+                    try!(write!(f, "    "));
                 }
             }
-            output.push('\n');
+            try!(write!(f, "\n"));
         }
-        write!(f, "{}", output)
+        write!(f, "")
     }
 }

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::cell::{Cell, RefCell};
 use std::collections::hash_set::HashSet;
 use std::hash::{Hash, Hasher};
@@ -45,11 +43,46 @@ static POSITIONS: [u32; 144] = [
     4335,
 ];
 
-pub struct TileFactory {
+pub fn create_tile_list(renderer: &Renderer) -> Vec<Tile> {
+    let mut tiles = Vec::new();
+
+    // NOTE: There is a (good) chance that valid board creation fails, it's easy to detect
+    //       but hard to prevent so we just keep trying untill we have a valid board
+    let mut valid = false;
+    while !valid {
+        let mut tile_factory = TileFactory::new();
+
+        valid = true;
+        while let Some(tiles_result) = tile_factory.get_tile_set(&renderer) {
+            if let Ok((tile1, tile2)) = tiles_result {
+                tiles.push(tile1);
+                tiles.push(tile2);
+            } else {
+                valid = false;
+                break;
+            }
+        }
+
+        // if board isn't valid we clear the vec and try again
+        if !valid { tiles.clear(); }
+    }
+
+    tiles.sort_by(|a, b| {
+        use std::cmp::Ordering::*;
+        if a.position.z() < b.position.z() { Less }
+        else if a.position.z() > b.position.z() { Greater }
+        else if a.position.x() > b.position.x() { Less }
+        else if a.position.x() < b.position.x() { Greater }
+        else if a.position.y() < b.position.y() { Less }
+        else { Greater }
+    });
+
+    tiles
+}
+
+struct TileFactory {
     remaining_tile_types: Vec<TileType>,
-    available_positions: Vec<TilePosition>,
-    next_tile: Option<Tile>,
-    tile_nodes: Vec<Rc<TileNode>>,
+    //tile_nodes: Vec<Rc<TileNode>>,
     available_nodes: Vec<Rc<TileNode>>,
     used_nodes: Vec<Rc<TileNode>>,
 }
@@ -64,82 +97,19 @@ impl TileFactory {
             }
         }
 
-        let tile_positions: Vec<TilePosition> =
-            POSITIONS.iter()
-                     .map(|&position| {
-                         let x = ((position % 1024) % 32) as u8;
-                         let y = ((position % 1024) / 32) as u8;
-                         let z = (position / 1024) as u8;
-                         TilePosition::new(x, y, z)
-                     })
-                     .collect();
-
-        let nodes =
-            POSITIONS.iter()
-                     .map(|&position| {
-                         let x = ((position % 1024) % 32) as u8;
-                         let y = ((position % 1024) / 32) as u8;
-                         let z = (position / 1024) as u8;
-                         Rc::new(TileNode::new(TilePosition::new(x, y, z)))
-                     })
-                     .collect::<HashSet<Rc<TileNode>>>();
-
-        for node in &nodes {
-            for other_node in nodes.iter() {
-                let (position, other_position) = (&node.position, &other_node.position);
-                if position == other_position { continue; }
-                if position.is_right_of(other_position) {
-                    node.neighbours.borrow_mut().push(
-                        TileNeighbour::new(other_node.clone(), Left));
-                } else if position.is_left_of(other_position) {
-                    node.neighbours.borrow_mut().push(
-                        TileNeighbour::new(other_node.clone(), Right));
-                } else if position.is_above(other_position) {
-                    node.neighbours.borrow_mut().push(
-                        TileNeighbour::new(other_node.clone(), Under));
-                } else if position.is_under(other_position) {
-                    node.neighbours.borrow_mut().push(
-                        TileNeighbour::new(other_node.clone(), Above));
-                }
-            }
-        }
-
-        fn traverse_nodes<F>(node: &Rc<TileNode>, action: &F) where F: Fn(&Rc<TileNode>) {
-            if node.visited.get() { return }
-            node.visited.set(true);
-            action(node);
-            for neighbour in node.neighbours.borrow().iter() {
-                traverse_nodes(&neighbour.tile, action);
-            }
-        }
-
-        let mut chains = 0;
-        let mut node_chains: Vec<RefCell<Vec<Rc<TileNode>>>> = vec![];
-        for node in &nodes {
-            if !node.visited.get() {
-                node_chains.push(RefCell::new(vec![]));
-                traverse_nodes(&node, &|node| {
-                    node_chains[chains].borrow_mut().push(node.clone());
-                });
-                chains += 1;
-            }
-        }
-
         let tile_nodes = create_tile_nodes();
         let starting_tiles = get_starting_tiles(&tile_nodes);
 
         TileFactory {
             remaining_tile_types: tile_types,
-            available_positions: tile_positions,
-            next_tile: None,
-            tile_nodes: tile_nodes,
+            //tile_nodes: tile_nodes,
             available_nodes: starting_tiles,
             used_nodes: vec![],
         }
     }
 
-    pub fn get_tile(&mut self, renderer: &Renderer) -> Result<(Tile, Tile), FactoryError> {
-        if self.available_nodes.is_empty() { return Err(FactoryError::Empty); }
+    fn get_tile_set(&mut self, renderer: &Renderer) -> Option<Result<(Tile, Tile), InvalidBoardError>> {
+        if self.available_nodes.is_empty() { return None; }
 
         let mut rng = rand::thread_rng();
 
@@ -151,7 +121,7 @@ impl TileFactory {
         let node1 = self.available_nodes.swap_remove(random_index);
         self.used_nodes.push(node1.clone());
 
-        if self.available_nodes.is_empty() { return Err(FactoryError::InvalidBoard); };
+        if self.available_nodes.is_empty() { return Some(Err(InvalidBoardError)); };
         let random_index = Range::new(0, self.available_nodes.len()).ind_sample(&mut rng);
         let node2 = self.available_nodes.swap_remove(random_index);
         self.used_nodes.push(node2.clone());
@@ -171,7 +141,7 @@ impl TileFactory {
 
         let tile1 = Tile::new(node1.position.clone(), tile_type1, renderer);
         let tile2 = Tile::new(node2.position.clone(), tile_type2, renderer);
-        Ok((tile1, tile2))
+        Some(Ok((tile1, tile2)))
     }
 }
 
@@ -280,10 +250,7 @@ fn create_tile_nodes() -> Vec<Rc<TileNode>> {
 }
 
 #[derive(Debug)]
-pub enum FactoryError {
-    Empty,
-    InvalidBoard,
-}
+struct InvalidBoardError;
 
 enum Direction {
     Left, Right, Under, Above,
