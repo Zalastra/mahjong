@@ -153,10 +153,9 @@ fn get_starting_tiles(nodes: &Vec<Rc<TileNode>>) -> Vec<Rc<TileNode>> {
             ground_node_graphs.push(vec![]);
 
             fn traverse_nodes(node: &Rc<TileNode>, visited: &mut HashSet<Rc<TileNode>>, graph: &mut Vec<Rc<TileNode>>) {
-                if visited.contains(node) { return }
+                if visited.contains(node) { return; }
                 visited.insert(node.clone());
-                if node.position.z() > 0 { return }
-                graph.push(node.clone());
+                if node.position.z() == 0 { graph.push(node.clone()); }
                 for neighbour in node.neighbours.borrow().iter() {
                     traverse_nodes(&neighbour.tile, visited, graph);
                 }
@@ -168,7 +167,6 @@ fn get_starting_tiles(nodes: &Vec<Rc<TileNode>>) -> Vec<Rc<TileNode>> {
     let mut rng = rand::thread_rng();
     let mut starting_positions = Vec::<Rc<TileNode>>::new();
     for graph in ground_node_graphs.iter() {
-        println!("{}", graph.len()); // TODO: remove after problem is fixed
         let rows: HashSet<u8> = graph
             .iter()
             .map(|node| {
@@ -181,7 +179,7 @@ fn get_starting_tiles(nodes: &Vec<Rc<TileNode>>) -> Vec<Rc<TileNode>> {
             .into_inner();
 
         match rows.len() {
-            0 => { println!("WTF!"); }, // TODO: this should never happen, but does. Investigate why
+            0 => unreachable!(),
             1 => {
                 let random_index = Range::new(0, graph.len()).ind_sample(&mut rng);
                 starting_positions.push(graph[random_index].clone());
