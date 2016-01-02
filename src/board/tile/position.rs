@@ -49,6 +49,11 @@ impl TilePosition {
         false
     }
 
+    pub fn is_neighbour_of(&self, other: &TilePosition) -> bool {
+        self.is_left_of(other) || self.is_right_of(other) ||
+            self.is_above(other) || self.is_under(other)
+    }
+
     pub fn is_left_of(&self, other: &TilePosition) -> bool {
         let position1 = Position::new(self.x() + 2, self.y(), self.z());
         let position2 = Position::new(self.x() + 2, self.y() + 1, self.z());

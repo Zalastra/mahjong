@@ -1,15 +1,20 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
+use std::collections::hash_set::HashSet;
 use std::fmt;
 use std::fmt::Write;
+use std::hash::{Hash, Hasher};
 use std::path::Path;
+use std::rc::{Rc, Weak};
 
 use sdl2::render::{Renderer, Texture};
 use sdl2::rect::Rect;
 
 use sdl2_image::LoadTexture;
 
-use board::tile::{Position, Tile};
-use board::factory::create_tile_list;
+use rand;
+use rand::distributions::{IndependentSample, Range};
+
+use board::tile::{Position, Tile, TilePosition, TileType};
 
 pub struct Board {
     tiles: Vec<Tile>,
@@ -98,7 +103,7 @@ fn generate_blocking_data(tiles: &Vec<Tile>) -> Vec<TileBlockingData> {
 
 impl Board {
     pub fn new(renderer: &Renderer) -> Board {
-        let tiles = create_tile_list(renderer);
+        let tiles = create_board(renderer);
 
         let blocking_data = generate_blocking_data(&tiles);
 
@@ -284,5 +289,270 @@ impl fmt::Debug for Board {
             try!(write!(f, "\n"));
         }
         write!(f, "")
+    }
+}
+
+// TODO: put positions in a file and read them from disk
+//       use human readable format
+static POSITIONS: [u32; 144] = [
+    4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
+    72, 74, 76, 78, 80, 82, 84, 86,
+    134, 136, 138, 140, 142, 144, 146, 148, 150, 152,
+    196, 198, 200, 202, 204, 206, 208, 210, 212, 214, 216, 218,
+    224, 226, 252,
+    260, 262, 264, 266, 268, 270, 272, 274, 276, 278, 280, 282,
+    326, 328, 330, 332, 334, 336, 338, 340, 342, 344,
+    392, 394, 396, 398, 400, 402, 404, 406,
+    452, 454, 456, 458, 460, 462, 464, 466, 468, 470, 472, 474,
+
+    1098, 1100, 1102, 1104, 1106, 1108,
+    1162, 1164, 1166, 1168, 1170, 1172,
+    1226, 1228, 1230, 1232, 1234, 1236,
+    1290, 1292, 1294, 1296, 1298, 1300,
+    1354, 1356, 1358, 1360, 1362, 1364,
+    1418, 1420, 1422, 1424, 1426, 1428,
+
+    2188, 2190, 2192, 2194,
+    2252, 2254, 2256, 2258,
+    2316, 2318, 2320, 2322,
+    2380, 2382, 2384, 2386,
+
+    3278, 3280,
+    3342, 3344,
+
+    4335,
+];
+
+pub fn create_board(renderer: &Renderer) -> Vec<Tile> {
+    let tile_types = {
+        let mut tile_types = Vec::new();
+        for tile_type in TileType::iter() {
+            for _ in 0..tile_type.max_allowed() {
+                tile_types.push(*tile_type);
+            }
+        }
+        tile_types
+    };
+
+
+    let tile_data = create_position_nodes();
+    let starting_positions = get_starting_position_nodes(&tile_data);
+
+    let mut tiles = vec![];
+    let mut valid = false;
+    while !valid {
+        valid = true;
+        let mut tile_factory = TileFactory {
+            remaining_tile_types: tile_types.clone(),
+            available_nodes: starting_positions.clone(),
+            used_nodes: vec![],
+            renderer: renderer,
+        };
+
+        while let Some(tiles_result) = tile_factory.get_tile_set() {
+            if let Ok((tile1, tile2)) = tiles_result {
+                tiles.push(tile1);
+                tiles.push(tile2);
+            } else {
+                valid = false;
+                break;
+            }
+        }
+
+        // if board isn't valid we clear the vec and try again
+        if !valid { tiles.clear(); }
+    }
+
+    tiles.sort_by(|a, b| {
+        use std::cmp::Ordering::*;
+        if a.position.z() < b.position.z() { Less }
+        else if a.position.z() > b.position.z() { Greater }
+        else if a.position.x() > b.position.x() { Less }
+        else if a.position.x() < b.position.x() { Greater }
+        else if a.position.y() < b.position.y() { Less }
+        else { Greater }
+    });
+
+    tiles
+}
+
+fn create_position_nodes() -> Vec<Rc<PositionNode>> {
+    let tiles =
+        POSITIONS.iter()
+                 .map(|&position| {
+                     let x = ((position % 1024) % 32) as u8;
+                     let y = ((position % 1024) / 32) as u8;
+                     let z = (position / 1024) as u8;
+                     Rc::new(PositionNode::new(TilePosition::new(x, y, z)))
+                 })
+                 .collect::<Vec<Rc<PositionNode>>>();
+
+    for tile in &tiles {
+        for other_tile in &tiles {
+            if tile.position.is_neighbour_of(&other_tile.position) {
+                tile.neighbours.borrow_mut().push(Rc::downgrade(other_tile));
+            }
+        }
+    }
+    tiles
+}
+
+fn get_starting_position_nodes(positions: &Vec<Rc<PositionNode>>) -> Vec<Rc<PositionNode>> {
+    let ground_position_graphs = get_ground_position_graphs(positions);
+
+    let mut rng = rand::thread_rng();
+    let mut starting_positions = vec![];
+    for graph in &ground_position_graphs {
+        let rows: HashSet<u8> = graph
+            .iter()
+            .map(|node| {
+                node.position.y()
+            })
+            .fold(RefCell::new(HashSet::new()), |rows, y| {
+                rows.borrow_mut().insert(y);
+                rows
+            })
+            .into_inner();
+
+        match rows.len() {
+            0 => unreachable!(),
+            1 => {
+                let random_index = Range::new(0, graph.len()).ind_sample(&mut rng);
+                starting_positions.push(graph[random_index].clone());
+            },
+            _ => {
+                // TODO: currently assumes row count to be 3 if not 1, make the code not depend on this to support different board setups
+
+                let mut add_random_node_from_row = |row| {
+                    let count = graph.iter()
+                        .filter(|&node| node.position.y() == row)
+                        .count();
+                    let random_index = Range::new(0, count).ind_sample(&mut rng);
+                    let (_, node) = graph.iter()
+                        .filter(|&node| node.position.y() == row)
+                        .enumerate()
+                        .filter(|&(index, _)| index == random_index)
+                        .next()
+                        .unwrap();
+
+                    starting_positions.push(node.clone());
+                };
+
+                let row = *rows.iter().min().unwrap();
+                add_random_node_from_row(row);
+
+                let row = *rows.iter().max().unwrap();
+                add_random_node_from_row(row);
+
+            },
+        }
+    }
+
+    starting_positions
+}
+
+fn get_ground_position_graphs(positions: &Vec<Rc<PositionNode>>) -> Vec<Vec<Rc<PositionNode>>> {
+    let mut ground_node_graphs: Vec<Vec<Rc<PositionNode>>> = vec![];
+    let mut visited_nodes: HashSet<Rc<PositionNode>> = HashSet::new();
+    for position_data in positions {
+        if !visited_nodes.contains(position_data) {
+            ground_node_graphs.push(vec![]);
+
+            fn traverse_nodes(position_data: &Rc<PositionNode>,
+                              visited: &mut HashSet<Rc<PositionNode>>,
+                              graph: &mut Vec<Rc<PositionNode>>) {
+                if visited.contains(position_data) { return; }
+                visited.insert(position_data.clone());
+                if position_data.position.z() == 0 { graph.push(position_data.clone()); }
+                for neighbour in position_data.neighbours.borrow().iter() {
+                    traverse_nodes(&neighbour.upgrade().unwrap(), visited, graph);
+                }
+            }
+
+            traverse_nodes(position_data, &mut visited_nodes, ground_node_graphs.last_mut().unwrap());
+        }
+    }
+    ground_node_graphs
+}
+
+
+#[derive(Debug)]
+struct InvalidBoardError;
+
+struct PositionNode {
+    pub position: TilePosition,
+    pub neighbours: RefCell<Vec<Weak<PositionNode>>>,
+    pub played: bool,
+}
+
+impl PositionNode {
+    fn new(position: TilePosition) -> Self {
+        PositionNode {
+            position: position,
+            neighbours: RefCell::new(vec![]),
+            played: false,
+        }
+    }
+}
+
+impl PartialEq for PositionNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.position == other.position
+    }
+}
+
+impl Eq for PositionNode { }
+
+impl Hash for PositionNode {
+    fn hash<H>(&self, state: &mut H) where H: Hasher {
+        let mut hash = (self.position.x() as u32) << 16;
+        hash |= (self.position.y() as u32) << 8;
+        hash |= self.position.z() as u32;
+        state.write_u32(hash);
+    }
+}
+
+struct TileFactory<'a> {
+    pub remaining_tile_types: Vec<TileType>,
+    pub available_nodes: Vec<Rc<PositionNode>>,
+    pub used_nodes: Vec<Rc<PositionNode>>,
+    pub renderer: &'a Renderer<'a>,
+}
+
+impl<'a> TileFactory<'a> {
+    fn get_tile_set(&mut self) -> Option<Result<(Tile, Tile), InvalidBoardError>> {
+        if self.available_nodes.is_empty() { return None; }
+
+        let mut rng = rand::thread_rng();
+
+        let random_index = Range::new(0, self.remaining_tile_types.len() / 2).ind_sample(&mut rng) * 2;
+        let tile_type1 = self.remaining_tile_types.remove(random_index);
+        let tile_type2 = self.remaining_tile_types.remove(random_index);
+
+        let random_index = Range::new(0, self.available_nodes.len()).ind_sample(&mut rng);
+        let node1 = self.available_nodes.swap_remove(random_index);
+        self.used_nodes.push(node1.clone());
+
+        if self.available_nodes.is_empty() { return Some(Err(InvalidBoardError)); };
+        let random_index = Range::new(0, self.available_nodes.len()).ind_sample(&mut rng);
+        let node2 = self.available_nodes.swap_remove(random_index);
+        self.used_nodes.push(node2.clone());
+
+        for neighbour in node1.neighbours.borrow().iter() {
+            let node = &neighbour.upgrade().unwrap();
+            if !self.available_nodes.contains(node) && !self.used_nodes.contains(node) {
+                self.available_nodes.push(node.clone());
+            }
+        }
+        for neighbour in node2.neighbours.borrow().iter() {
+            let node = &neighbour.upgrade().unwrap();
+            if !self.available_nodes.contains(node) && !self.used_nodes.contains(node) {
+                self.available_nodes.push(node.clone());
+            }
+        }
+
+        let tile1 = Tile::new(node1.position.clone(), tile_type1, self.renderer);
+        let tile2 = Tile::new(node2.position.clone(), tile_type2, self.renderer);
+        Some(Ok((tile1, tile2)))
     }
 }
