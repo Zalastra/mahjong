@@ -47,8 +47,6 @@ impl<'a> App<'a> {
         let mut mouse_x = 0;
         let mut mouse_y = 0;
 
-        if cfg!(debug_assertions) { println!("{:?}", self.board); }
-
         while running {
             for event in self.event_pump.poll_iter() {
                 use sdl2::event::Event;
@@ -65,12 +63,10 @@ impl<'a> App<'a> {
                         mouse_y = y;
                     },
                     Event::MouseButtonUp { mouse_btn: Mouse::Left, .. } => {
-                        self.board.select_tile(mouse_x, mouse_y);
-                        if cfg!(debug_assertions) { println!("{:?}", self.board); }
+                        self.board.try_select_tile(mouse_x, mouse_y);
                     },
                     Event::KeyUp { keycode: Some(Keycode::U), .. } => {
                         self.board.undo();
-                        if cfg!(debug_assertions) { println!("{:?}", self.board); }
                     },
                     Event::Window { win_event_id, .. } => {
                         // NOTE: ugly hack to fix SDL2 bug occurs when maximizing a previously

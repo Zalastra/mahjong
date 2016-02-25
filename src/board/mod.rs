@@ -1,4 +1,4 @@
 mod board;
-mod tile;
+mod tiles;
 
 pub use self::board::Board;

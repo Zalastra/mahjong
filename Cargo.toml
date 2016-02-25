@@ -5,7 +5,5 @@ authors = ["Maarten Bonsema <maarten.bonsema@gmail.com>"]
 
 [dependencies]
 rand = "0.3.11"
-sdl2 = "0.9"
-
-[dependencies.sdl2_image]
-git = "https://github.com/xsleonard/rust-sdl2_image"
+sdl2 = "0.12.1"
+sdl2_image = "0.6.0"
