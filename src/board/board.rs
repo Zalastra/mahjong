@@ -47,7 +47,9 @@ impl Board {
                     }
 
                     // valid match
-                    self.play_tiles(index1, index2);
+                    self.tiles[index1].play();
+                    self.tiles[index2].play();
+                    self.played.push((index1, index2));
 
                     self.deselect_tile(index2);
                 },
@@ -76,22 +78,16 @@ impl Board {
             let x = tile.x() as i32 * 23 + tile.z() as i32 * 5 + 20;
             let y = tile.y() as i32 * 29 - tile.z() as i32 * 5 + 15;
 
-            renderer.copy(&self.side_texture, None, Rect::new(x - 5, y, 5, 62).unwrap());
-            renderer.copy(&self.bottom_texture, None, Rect::new(x, y + 57, 46, 5).unwrap());
+            renderer.copy(&self.side_texture, None, Some(Rect::new(x - 5, y, 5, 62)));
+            renderer.copy(&self.bottom_texture, None, Some(Rect::new(x, y + 57, 46, 5)));
 
-            renderer.copy(&tile.texture(), None, Rect::new(x, y, 46, 57).unwrap());
+            renderer.copy(&tile.texture(), None, Some(Rect::new(x, y, 46, 57)));
         }
-    }
-
-    fn play_tiles(&mut self, index1: usize, index2: usize) {
-        self.tiles[index1].play();
-        self.tiles[index2].play();
-        self.played.push((index1, index2));
     }
 
     fn select_tile(&mut self, index: usize) {
         self.tiles[index].highlight();
-        self.selected_tile= Some(index);
+        self.selected_tile = Some(index);
     }
 
     fn deselect_tile(&mut self, index: usize) {
