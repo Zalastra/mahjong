@@ -3,8 +3,9 @@ use std::collections::hash_set::HashSet;
 use std::ops::{Index, IndexMut};
 use std::rc::Rc;
 use std::slice::Iter;
+use std::time::UNIX_EPOCH;
 
-use rand;
+use rand::{SeedableRng, StdRng};
 use rand::distributions::{IndependentSample, Range};
 
 use sdl2::render::{Renderer};
@@ -111,7 +112,7 @@ impl<'a> TilesBuilder<'a> {
     fn get_tile_set(&mut self) -> Option<Result<(Tile, Tile), ()>> {
         if self.available_positions.is_empty() { return None; }
 
-        let mut rng = rand::thread_rng();
+        let mut rng = StdRng::from_seed(&[UNIX_EPOCH.elapsed().unwrap().as_secs() as usize]);
 
         let random_index = Range::new(0, self.remaining_tile_types.len() / 2).ind_sample(&mut rng) * 2;
         let tile_type1 = self.remaining_tile_types.remove(random_index);
@@ -158,7 +159,7 @@ fn get_tile_types() -> Vec<TileType> {
 fn get_starting_positions(positions: &Positions) -> Vec<Rc<BoardPosition>> {
     let ground_position_graphs = get_ground_positions(positions);
 
-    let mut rng = rand::thread_rng();
+    let mut rng = StdRng::from_seed(&[UNIX_EPOCH.elapsed().unwrap().as_secs() as usize]);
     let mut starting_positions = vec![];
     for graph in &ground_position_graphs {
         let rows: HashSet<u8> = graph

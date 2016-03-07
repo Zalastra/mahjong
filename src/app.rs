@@ -43,44 +43,55 @@ impl<'a> App<'a> {
 
     pub fn run(&mut self) {
         let mut running = true;
+        let mut game_done = false;
 
         let mut mouse_x = 0;
         let mut mouse_y = 0;
 
         while running {
-            for event in self.event_pump.poll_iter() {
-                use sdl2::event::Event;
-                use sdl2::mouse::Mouse;
+            while !game_done {
+                for event in self.event_pump.poll_iter() {
+                    use sdl2::event::Event;
+                    use sdl2::mouse::Mouse;
 
-                match event {
-                    Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                        running = false
-                    },
-                    Event::MouseButtonDown { mouse_btn: Mouse::Left, x, y, .. } => {
-                        mouse_x = x;
-                        mouse_y = y;
-                    },
-                    Event::MouseButtonUp { mouse_btn: Mouse::Left, .. } => {
-                        self.board.try_select_tile(mouse_x, mouse_y);
-                    },
-                    Event::KeyUp { keycode: Some(Keycode::H), .. } => {
-                        self.board.highlight_possible_matches();
-                    },
-                    Event::KeyUp { keycode: Some(Keycode::U), .. } => {
-                        self.board.undo();
-                    },
-                    _ => {}
+                    match event {
+                        Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                            game_done = true;
+                            running = false;
+                        },
+                        Event::MouseButtonDown { mouse_btn: Mouse::Left, x, y, .. } => {
+                            mouse_x = x;
+                            mouse_y = y;
+                        },
+                        Event::MouseButtonUp { mouse_btn: Mouse::Left, .. } => {
+                            self.board.try_select_tile(mouse_x, mouse_y);
+                        },
+                        Event::KeyUp { keycode: Some(Keycode::H), .. } => {
+                            self.board.highlight_possible_matches();
+                        },
+                        Event::KeyUp { keycode: Some(Keycode::N), .. } => {
+                            game_done = true;
+                        },
+                        Event::KeyUp { keycode: Some(Keycode::U), .. } => {
+                            self.board.undo();
+                        },
+                        _ => {}
+                    }
                 }
+
+                self.board.update();
+
+                self.renderer.set_draw_color(Color::RGB(0, 0, 0));
+                self.renderer.clear();
+                self.board.render(&mut self.renderer);
+                self.renderer.present();
+
+                thread::sleep(Duration::from_millis(10));
             }
-
-            self.board.update();
-
-            self.renderer.set_draw_color(Color::RGB(0, 0, 0));
-            self.renderer.clear();
-            self.board.render(&mut self.renderer);
-            self.renderer.present();
-
-            thread::sleep(Duration::from_millis(10));
+            if running {
+                self.board = Board::new(&self.renderer);
+                game_done = false;
+            }
         }
     }
 }
