@@ -1,4 +1,6 @@
+use std::fmt::Debug;
 use std::path::Path;
+use std::time::Instant;
 
 use sdl2::render::{Renderer, Texture};
 use sdl2::rect::Rect;
@@ -11,6 +13,7 @@ pub struct Board {
     tiles: Tiles,
     played: Vec<(usize, usize)>,
     selected_tile: Option<usize>,
+    hints: Option<Hints>,
     side_texture: Texture,
     bottom_texture: Texture,
 }
@@ -25,19 +28,21 @@ impl Board {
             tiles: TilesBuilder::new(&POSITIONS, renderer).build(),
             played: Vec::new(),
             selected_tile: None,
+            hints: None,
             side_texture: side_texture,
             bottom_texture: bottom_texture,
         }
     }
 
-    // TODO: Needs better name or reflect the fact it might not work through returning an error
     pub fn try_select_tile(&mut self, mouse_x: i32, mouse_y: i32) {
         if let Some(index1) = self.find_tile_index_by_coord(mouse_x, mouse_y) {
+            self.stop_hints();
+
             match self.selected_tile {
                 Some(index2) => {
                     // deselect tile
                     if index1 == index2 {
-                        self.deselect_tile(index2);
+                        self.deselect_tile();
                         return;
                     }
 
@@ -51,7 +56,7 @@ impl Board {
                     self.tiles[index2].play();
                     self.played.push((index1, index2));
 
-                    self.deselect_tile(index2);
+                    self.deselect_tile();
                 },
                 None => {
                     self.select_tile(index1)
@@ -61,13 +66,68 @@ impl Board {
     }
 
     pub fn undo(&mut self) {
-        if let Some(index) = self.selected_tile {
-            self.deselect_tile(index)
-        }
+        self.deselect_tile();
+        self.stop_hints();
+
         if !self.played.is_empty() {
             let (index1, index2) = self.played.pop().unwrap();
             self.tiles[index1].reset();
             self.tiles[index2].reset();
+        }
+    }
+
+    pub fn highlight_possible_matches(&mut self) {
+        self.deselect_tile();
+        self.stop_hints();
+
+        let mut sets = Vec::new();
+        let mut used_indices = Vec::new();
+
+        for (index, tile) in self.tiles.iter_playable() {
+            if used_indices.contains(&index) { continue; }
+
+            let mut set = HintSet::new(index);
+            for (index2, tile2) in self.tiles.iter_playable() {
+                if !tile.matches(tile2) || index == index2 { continue; }
+
+                used_indices.push(index2);
+                set.add(index2);
+            }
+
+            if set.0[1] != None {
+                used_indices.push(index);
+                sets.push(set);
+            }
+        }
+
+        if !sets.is_empty() {
+            sets[0].highlight(&mut self.tiles);
+
+            self.hints = Some(Hints {
+                sets: sets,
+                start_time: Instant::now(),
+                current_index: 0,
+            });
+        }
+    }
+
+    pub fn update(&mut self) {
+        let mut done = false;
+        if let Some(hints) = self.hints.as_mut() {
+            let index = (hints.start_time.elapsed().as_secs() / 2) as usize;
+
+            if index > hints.current_index {
+                hints.sets[hints.current_index].unhighlight(&mut self.tiles);
+                if index >= hints.sets.len() {
+                    done = true;
+                } else {
+                    hints.sets[index].highlight(&mut self.tiles);
+                    hints.current_index = index;
+                }
+            }
+        }
+        if done {
+            self.hints = None;
         }
     }
 
@@ -90,14 +150,24 @@ impl Board {
         self.selected_tile = Some(index);
     }
 
-    fn deselect_tile(&mut self, index: usize) {
-        self.tiles[index].unhighlight();
+    fn deselect_tile(&mut self) {
+        if let Some(index) = self.selected_tile {
+            self.tiles[index].unhighlight();
+        }
         self.selected_tile = None;
+    }
+
+    fn stop_hints(&mut self) {
+        if let Some(hints) = self.hints.as_mut() {
+            hints.sets[hints.current_index].unhighlight(&mut self.tiles);
+        }
+
+        self.hints = None;
     }
 
     fn find_tile_index_by_coord(&self, x: i32, y: i32) -> Option<usize> {
         for (index, tile) in self.tiles.iter().enumerate().rev() {
-            if tile.is_played() || !tile.is_playable() { continue; }
+            if !tile.is_playable() { continue; }
 
             let tile_x = tile.x() as i32 * 23 + tile.z() as i32 * 5 + 15;
             let tile_y = tile.y() as i32 * 29 - tile.z() as i32 * 5 + 15;
@@ -107,6 +177,52 @@ impl Board {
             }
         }
         None
+    }
+}
+
+struct Hints {
+    sets: Vec<HintSet>,
+    start_time: Instant,
+    current_index: usize,
+}
+
+struct HintSet ([Option<usize>; 4]);
+use std::fmt;
+impl Debug for HintSet {
+
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
+impl HintSet {
+    fn new(index: usize) -> HintSet {
+        HintSet([Some(index), None, None, None])
+    }
+
+    fn add(&mut self, index: usize) {
+        for opt_index in self.0.iter_mut() {
+            if *opt_index == None {
+                *opt_index = Some(index);
+                break;
+            }
+        }
+    }
+
+    fn highlight(&self, tiles: &mut Tiles) {
+        for opt_index in self.0.iter() {
+            if let Some(index) = *opt_index {
+                tiles[index].highlight();
+            }
+        }
+    }
+
+    fn unhighlight(&self, tiles: &mut Tiles) {
+        for opt_index in self.0.iter() {
+            if let Some(index) = *opt_index {
+                tiles[index].unhighlight();
+            }
+        }
     }
 }
 

@@ -47,7 +47,7 @@ impl Tile {
     }
 
     pub fn is_playable(&self) -> bool {
-        self.position.is_reachable()
+        self.position.is_reachable() && !self.position.is_empty()
     }
 
     pub fn matches(&self, other: &Tile) -> bool {

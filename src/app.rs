@@ -63,12 +63,17 @@ impl<'a> App<'a> {
                     Event::MouseButtonUp { mouse_btn: Mouse::Left, .. } => {
                         self.board.try_select_tile(mouse_x, mouse_y);
                     },
+                    Event::KeyUp { keycode: Some(Keycode::H), .. } => {
+                        self.board.highlight_possible_matches();
+                    },
                     Event::KeyUp { keycode: Some(Keycode::U), .. } => {
                         self.board.undo();
                     },
                     _ => {}
                 }
             }
+
+            self.board.update();
 
             self.renderer.set_draw_color(Color::RGB(0, 0, 0));
             self.renderer.clear();

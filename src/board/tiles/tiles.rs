@@ -13,6 +13,8 @@ use super::position::{BoardPosition, Positions};
 use super::tile::Tile;
 use super::tile_type::TileType;
 
+type Test = Fn(&Tile) -> bool;
+
 pub struct Tiles {
     tiles: Vec<Tile>
 }
@@ -20,6 +22,10 @@ pub struct Tiles {
 impl Tiles {
     pub fn iter(&self) -> Iter<Tile> {
         self.tiles.iter()
+    }
+
+    pub fn iter_playable<'a>(&'a self) -> Box<Iterator<Item=(usize, &'a Tile)> + 'a> {
+        Box::new(self.tiles.iter().enumerate().filter(|&(_, tile)| tile.is_playable()))
     }
 }
 
