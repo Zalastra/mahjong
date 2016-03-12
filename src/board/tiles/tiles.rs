@@ -3,10 +3,8 @@ use std::collections::hash_set::HashSet;
 use std::ops::{Index, IndexMut};
 use std::rc::Rc;
 use std::slice::Iter;
-use std::time::UNIX_EPOCH;
 
-use rand::{SeedableRng, StdRng};
-use rand::distributions::{IndependentSample, Range};
+use rand::{thread_rng, Rng};
 
 use sdl2::render::{Renderer};
 
@@ -112,18 +110,17 @@ impl<'a> TilesBuilder<'a> {
     fn get_tile_set(&mut self) -> Option<Result<(Tile, Tile), ()>> {
         if self.available_positions.is_empty() { return None; }
 
-        let mut rng = StdRng::from_seed(&[UNIX_EPOCH.elapsed().unwrap().as_secs() as usize]);
-
-        let random_index = Range::new(0, self.remaining_tile_types.len() / 2).ind_sample(&mut rng) * 2;
+        let random_index = thread_rng().gen_range(0, self.remaining_tile_types.len() / 2);
         let tile_type1 = self.remaining_tile_types.remove(random_index);
         let tile_type2 = self.remaining_tile_types.remove(random_index);
 
-        let random_index = Range::new(0, self.available_positions.len()).ind_sample(&mut rng);
+        let random_index = thread_rng().gen_range(0, self.available_positions.len());
         let node1 = self.available_positions.swap_remove(random_index);
         self.used_positions.push(node1.clone());
 
         if self.available_positions.is_empty() { return Some(Err(())); };
-        let random_index = Range::new(0, self.available_positions.len()).ind_sample(&mut rng);
+
+        let random_index = thread_rng().gen_range(0, self.available_positions.len());
         let node2 = self.available_positions.swap_remove(random_index);
         self.used_positions.push(node2.clone());
 
@@ -158,9 +155,8 @@ fn get_tile_types() -> Vec<TileType> {
 
 fn get_starting_positions(positions: &Positions) -> Vec<Rc<BoardPosition>> {
     let ground_position_graphs = get_ground_positions(positions);
-
-    let mut rng = StdRng::from_seed(&[UNIX_EPOCH.elapsed().unwrap().as_secs() as usize]);
     let mut starting_positions = vec![];
+
     for graph in &ground_position_graphs {
         let rows: HashSet<u8> = graph
             .iter()
@@ -176,7 +172,7 @@ fn get_starting_positions(positions: &Positions) -> Vec<Rc<BoardPosition>> {
         match rows.len() {
             0 => unreachable!(),
             1 => {
-                let random_index = Range::new(0, graph.len()).ind_sample(&mut rng);
+                let random_index = thread_rng().gen_range(0, graph.len());
                 starting_positions.push(graph[random_index].clone());
             },
             3 => {
@@ -184,7 +180,8 @@ fn get_starting_positions(positions: &Positions) -> Vec<Rc<BoardPosition>> {
                     let count = graph.iter()
                         .filter(|&node| node.y() == row)
                         .count();
-                    let random_index = Range::new(0, count).ind_sample(&mut rng);
+
+                    let random_index = thread_rng().gen_range(0, count);
                     let (_, node) = graph.iter()
                         .filter(|&node| node.y() == row)
                         .enumerate()
