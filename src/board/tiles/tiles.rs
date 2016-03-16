@@ -12,8 +12,6 @@ use super::position::{BoardPosition, Positions};
 use super::tile::Tile;
 use super::tile_type::TileType;
 
-type Test = Fn(&Tile) -> bool;
-
 pub struct Tiles {
     tiles: Vec<Tile>
 }
