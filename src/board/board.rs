@@ -34,7 +34,7 @@ impl Board {
         }
     }
 
-    pub fn try_select_tile(&mut self, mouse_x: i32, mouse_y: i32) {
+    pub fn try_select_tile(&mut self, mouse_x: i32, mouse_y: i32) -> Result<(), GameOver> {
         if let Some(index1) = self.find_tile_index_by_coord(mouse_x, mouse_y) {
             self.stop_hints();
 
@@ -43,12 +43,12 @@ impl Board {
                     // deselect tile
                     if index1 == index2 {
                         self.deselect_tile();
-                        return;
+                        return Ok(());
                     }
 
                     // test tile match
                     if !Tile::matches(&self.tiles[index1], &self.tiles[index2]) {
-                        return;
+                        return Ok(());
                     }
 
                     // valid match
@@ -57,12 +57,17 @@ impl Board {
                     self.played.push((index1, index2));
 
                     self.deselect_tile();
+
+                    if self.get_available_matches().is_err() {
+                        return Err(GameOver);
+                    }
                 },
                 None => {
                     self.select_tile(index1)
                 }
             }
         }
+        Ok(())
     }
 
     pub fn undo(&mut self) {
@@ -80,27 +85,7 @@ impl Board {
         self.deselect_tile();
         self.stop_hints();
 
-        let mut sets = Vec::new();
-        let mut used_indices = Vec::new();
-
-        for (index, tile) in self.tiles.iter_playable() {
-            if used_indices.contains(&index) { continue; }
-
-            let mut set = HintSet::new(index);
-            for (index2, tile2) in self.tiles.iter_playable() {
-                if !tile.matches(tile2) || index == index2 { continue; }
-
-                used_indices.push(index2);
-                set.add(index2);
-            }
-
-            if set.0[1] != None {
-                used_indices.push(index);
-                sets.push(set);
-            }
-        }
-
-        if !sets.is_empty() {
+        if let Ok(sets) = self.get_available_matches() {
             sets[0].highlight(&mut self.tiles);
 
             self.hints = Some(Hints {
@@ -145,6 +130,34 @@ impl Board {
         }
     }
 
+    fn get_available_matches(&self) -> Result<Vec<HintSet>, NoMatch> {
+        let mut sets = Vec::new();
+        let mut used_indices = Vec::new();
+
+        for (index, tile) in self.tiles.iter_playable() {
+            if used_indices.contains(&index) { continue; }
+
+            let mut set = HintSet::new(index);
+            for (index2, tile2) in self.tiles.iter_playable() {
+                if !tile.matches(tile2) || index == index2 { continue; }
+
+                used_indices.push(index2);
+                set.add(index2);
+            }
+
+            if set.0[1] != None {
+                used_indices.push(index);
+                sets.push(set);
+            }
+        }
+
+        if sets.is_empty() {
+            Err(NoMatch)
+        } else {
+            Ok(sets)
+        }
+    }
+
     fn select_tile(&mut self, index: usize) {
         self.tiles[index].highlight();
         self.selected_tile = Some(index);
@@ -179,6 +192,10 @@ impl Board {
         None
     }
 }
+
+pub struct GameOver;
+
+struct NoMatch;
 
 struct Hints {
     sets: Vec<HintSet>,

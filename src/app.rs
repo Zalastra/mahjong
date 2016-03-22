@@ -5,6 +5,9 @@ use sdl2::{self, EventPump};
 use sdl2::pixels::Color;
 use sdl2::keyboard::Keycode;
 use sdl2::render::Renderer;
+use sdl2::event::Event;
+use sdl2::mouse::Mouse;
+use sdl2::messagebox::*;
 
 use sdl2_image::{self, INIT_PNG};
 
@@ -44,6 +47,7 @@ impl<'a> App<'a> {
     pub fn run(&mut self) {
         let mut running = true;
         let mut game_done = false;
+        let mut game_over = false;
 
         let mut mouse_x = 0;
         let mut mouse_y = 0;
@@ -51,9 +55,6 @@ impl<'a> App<'a> {
         while running {
             while !game_done {
                 for event in self.event_pump.poll_iter() {
-                    use sdl2::event::Event;
-                    use sdl2::mouse::Mouse;
-
                     match event {
                         Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                             game_done = true;
@@ -64,7 +65,9 @@ impl<'a> App<'a> {
                             mouse_y = y;
                         },
                         Event::MouseButtonUp { mouse_btn: Mouse::Left, .. } => {
-                            self.board.try_select_tile(mouse_x, mouse_y);
+                            if self.board.try_select_tile(mouse_x, mouse_y).is_err() {
+                                game_over = true;
+                            }
                         },
                         Event::KeyUp { keycode: Some(Keycode::H), .. } => {
                             self.board.highlight_possible_matches();
@@ -85,6 +88,11 @@ impl<'a> App<'a> {
                 self.renderer.clear();
                 self.board.render(&mut self.renderer);
                 self.renderer.present();
+
+                if game_over {
+                    show_simple_message_box(MessageBoxFlag::all(), "Game Over", "You have no possible moves left", None).ok();
+                    game_over = false;
+                }
 
                 thread::sleep(Duration::from_millis(10));
             }
