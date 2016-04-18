@@ -1,29 +1,26 @@
 use std::fmt;
-use std::path::PathBuf;
 use std::rc::Rc;
 
-use sdl2::render::{Renderer, Texture};
-use sdl2_image::LoadTexture;
+use sdl2::rect::Rect;
+use sdl2::render::Renderer;
 
 use super::position::BoardPosition;
 use super::tile_type::TileType;
+use super::textures::TileTextures;
+use super::textures::TextureId::*;
 
 pub struct Tile {
     position: Rc<BoardPosition>,
-    texture: Texture,
     kind: TileType,
+    highlighted: bool,
 }
 
 impl Tile {
-    pub fn new(position: Rc<BoardPosition>, kind: TileType, renderer: &Renderer) -> Tile {
-        let mut texture_path = PathBuf::from("img/");
-        texture_path.push(kind.filename_texture());
-        let texture = renderer.load_texture(texture_path.as_path()).expect("error loading texture");
-
+    pub fn new(position: Rc<BoardPosition>, kind: TileType) -> Tile {
         Tile {
             position: position,
-            texture: texture,
             kind: kind,
+            highlighted: false,
         }
     }
 
@@ -38,10 +35,7 @@ impl Tile {
     pub fn z(&self) -> u8 {
         self.position.z()
     }
-
-    pub fn texture(&self) -> &Texture {
-        &self.texture
-    }
+    
     pub fn is_played(&self) -> bool {
         self.position.is_empty()
     }
@@ -63,11 +57,20 @@ impl Tile {
     }
 
     pub fn highlight(&mut self) {
-        self.texture.set_color_mod(255, 127, 127);
+        self.highlighted = true;
     }
 
     pub fn unhighlight(&mut self) {
-        self.texture.set_color_mod(255, 255, 255);
+        self.highlighted = false;
+    }
+    
+    pub fn render(&self, renderer: &mut Renderer, textures: &TileTextures) {
+        let x = self.x() as i32 * 23 + self.z() as i32 * 5 + 20;
+        let y = self.y() as i32 * 29 - self.z() as i32 * 5 + 15;
+        
+        textures.render(renderer, Side, Rect::new(x - 5, y, 5, 62));
+        textures.render(renderer, Bottom, Rect::new(x, y + 57, 46, 5));
+        textures.render(renderer, Face(self.kind, self.highlighted), Rect::new(x, y, 46, 57));
     }
 }
 

@@ -1,36 +1,32 @@
 use std::fmt::Debug;
-use std::path::Path;
 use std::time::Instant;
 
-use sdl2::render::{Renderer, Texture};
-use sdl2::rect::Rect;
+use sdl2::render::Renderer;
 
-use sdl2_image::LoadTexture;
-
-use super::tiles::{Tile, Tiles, TilesBuilder};
+use super::tiles::{Tile, Tiles, TilesBuilder, TileTextures};
 
 pub struct Board {
     tiles: Tiles,
     played: Vec<(usize, usize)>,
     selected_tile: Option<usize>,
     hints: Option<Hints>,
-    side_texture: Texture,
-    bottom_texture: Texture,
+    textures: TileTextures,
 }
 
 impl Board {
     pub fn new(renderer: &Renderer) -> Board {
 
-        let side_texture = renderer.load_texture(Path::new("img/TileSide.png")).expect("error loading side texture");
-        let bottom_texture = renderer.load_texture(Path::new("img/TileBottom.png")).expect("error loading bottom texture");
+        let mut textures = TileTextures::new();
+        textures.load_textures(renderer);
+        
+        let tiles = TilesBuilder::new(&POSITIONS).build();
 
         Board {
-            tiles: TilesBuilder::new(&POSITIONS, renderer).build(),
+            tiles: tiles,
             played: Vec::new(),
             selected_tile: None,
             hints: None,
-            side_texture: side_texture,
-            bottom_texture: bottom_texture,
+            textures: textures
         }
     }
 
@@ -120,13 +116,7 @@ impl Board {
         for tile in self.tiles.iter() {
             if tile.is_played() { continue; }
 
-            let x = tile.x() as i32 * 23 + tile.z() as i32 * 5 + 20;
-            let y = tile.y() as i32 * 29 - tile.z() as i32 * 5 + 15;
-
-            renderer.copy(&self.side_texture, None, Some(Rect::new(x - 5, y, 5, 62)));
-            renderer.copy(&self.bottom_texture, None, Some(Rect::new(x, y + 57, 46, 5)));
-
-            renderer.copy(&tile.texture(), None, Some(Rect::new(x, y, 46, 57)));
+            tile.render(renderer, &self.textures)
         }
     }
 

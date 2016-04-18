@@ -1,7 +1,3 @@
-game functionality:
-  - provide hints of available matches
-  - victory / game over
-
 interface:
   - new game button
   - undo button

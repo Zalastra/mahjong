@@ -18,9 +18,9 @@ macro_rules! iterable_enum {
                 ENUM_VARIANTS.iter()
             }
 
-            pub fn filename_texture(&self) -> String {
+            pub fn filename_texture(&self) -> &'static str {
                 match *self {
-                    $( $variant => String::from(stringify!($variant)) + ".png",)*
+                    $( $variant => concat!(stringify!($variant), ".png"),)*
                 }
             }
         }

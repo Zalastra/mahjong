@@ -6,8 +6,6 @@ use std::slice::Iter;
 
 use rand::{thread_rng, Rng};
 
-use sdl2::render::{Renderer};
-
 use super::position::{BoardPosition, Positions};
 use super::tile::Tile;
 use super::tile_type::TileType;
@@ -40,16 +38,15 @@ impl IndexMut<usize> for Tiles {
     }
 }
 
-pub struct TilesBuilder<'a> {
+pub struct TilesBuilder {
     all_positions: Positions,
     remaining_tile_types: Vec<TileType>,
     available_positions: Vec<Rc<BoardPosition>>,
     used_positions: Vec<Rc<BoardPosition>>,
-    renderer: &'a Renderer<'a>,
 }
 
-impl<'a> TilesBuilder<'a> {
-    pub fn new(positions: &'a [u32; 144], renderer: &'a Renderer) -> TilesBuilder<'a> {
+impl TilesBuilder {
+    pub fn new(positions: &[u32; 144]) -> TilesBuilder {
         let all_positions = Positions::new(positions);
         let starting_positions = get_starting_positions(&all_positions);
         TilesBuilder {
@@ -57,7 +54,6 @@ impl<'a> TilesBuilder<'a> {
             remaining_tile_types: get_tile_types(),
             available_positions: starting_positions,
             used_positions: Vec::new(),
-            renderer: renderer,
         }
     }
 
@@ -135,8 +131,8 @@ impl<'a> TilesBuilder<'a> {
             }
         }
 
-        let tile1 = Tile::new(node1, tile_type1, self.renderer);
-        let tile2 = Tile::new(node2, tile_type2, self.renderer);
+        let tile1 = Tile::new(node1, tile_type1);
+        let tile2 = Tile::new(node2, tile_type2);
         Some(Ok((tile1, tile2)))
     }
 }
