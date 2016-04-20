@@ -35,7 +35,7 @@ impl Tile {
     pub fn z(&self) -> u8 {
         self.position.z()
     }
-    
+
     pub fn is_played(&self) -> bool {
         self.position.is_empty()
     }
@@ -63,14 +63,16 @@ impl Tile {
     pub fn unhighlight(&mut self) {
         self.highlighted = false;
     }
-    
+
     pub fn render(&self, renderer: &mut Renderer, textures: &TileTextures) {
         let x = self.x() as i32 * 23 + self.z() as i32 * 5 + 20;
         let y = self.y() as i32 * 29 - self.z() as i32 * 5 + 15;
-        
+
         textures.render(renderer, Side, Rect::new(x - 5, y, 5, 62));
         textures.render(renderer, Bottom, Rect::new(x, y + 57, 46, 5));
-        textures.render(renderer, Face(self.kind, self.highlighted), Rect::new(x, y, 46, 57));
+        textures.render(renderer,
+                        Face(self.kind, self.highlighted),
+                        Rect::new(x, y, 46, 57));
     }
 }
 

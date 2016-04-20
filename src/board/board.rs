@@ -18,7 +18,7 @@ impl Board {
 
         let mut textures = TileTextures::new();
         textures.load_textures(renderer);
-        
+
         let tiles = TilesBuilder::new(&POSITIONS).build();
 
         Board {
@@ -26,7 +26,7 @@ impl Board {
             played: Vec::new(),
             selected_tile: None,
             hints: None,
-            textures: textures
+            textures: textures,
         }
     }
 
@@ -57,10 +57,8 @@ impl Board {
                     if self.get_available_matches().is_err() {
                         return Err(GameOver);
                     }
-                },
-                None => {
-                    self.select_tile(index1)
                 }
+                None => self.select_tile(index1),
             }
         }
         Ok(())
@@ -114,7 +112,9 @@ impl Board {
 
     pub fn render(&self, renderer: &mut Renderer) {
         for tile in self.tiles.iter() {
-            if tile.is_played() { continue; }
+            if tile.is_played() {
+                continue;
+            }
 
             tile.render(renderer, &self.textures)
         }
@@ -125,11 +125,15 @@ impl Board {
         let mut used_indices = Vec::new();
 
         for (index, tile) in self.tiles.iter_playable() {
-            if used_indices.contains(&index) { continue; }
+            if used_indices.contains(&index) {
+                continue;
+            }
 
             let mut set = HintSet::new(index);
             for (index2, tile2) in self.tiles.iter_playable() {
-                if !tile.matches(tile2) || index == index2 { continue; }
+                if !tile.matches(tile2) || index == index2 {
+                    continue;
+                }
 
                 used_indices.push(index2);
                 set.add(index2);
@@ -170,7 +174,9 @@ impl Board {
 
     fn find_tile_index_by_coord(&self, x: i32, y: i32) -> Option<usize> {
         for (index, tile) in self.tiles.iter().enumerate().rev() {
-            if !tile.is_playable() { continue; }
+            if !tile.is_playable() {
+                continue;
+            }
 
             let tile_x = tile.x() as i32 * 23 + tile.z() as i32 * 5 + 15;
             let tile_y = tile.y() as i32 * 29 - tile.z() as i32 * 5 + 15;
@@ -193,10 +199,9 @@ struct Hints {
     current_index: usize,
 }
 
-struct HintSet ([Option<usize>; 4]);
+struct HintSet([Option<usize>; 4]);
 use std::fmt;
 impl Debug for HintSet {
-
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.0)
     }

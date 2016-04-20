@@ -25,10 +25,10 @@ impl<'a> App<'a> {
         let video_subsystem = sdl_context.video().expect("error creating video subsystem");
         sdl2_image::init(INIT_PNG).expect("error initializing sdl2 image");
         let mut window = video_subsystem.window("Mahjong", 1080, 750)
-                                    .maximized()
-                                    .resizable()
-                                    .build()
-                                    .expect("error creating window");
+                                        .maximized()
+                                        .resizable()
+                                        .build()
+                                        .expect("error creating window");
 
         window.set_minimum_size(730, 500).unwrap();
 
@@ -56,28 +56,29 @@ impl<'a> App<'a> {
             while !game_done {
                 for event in self.event_pump.poll_iter() {
                     match event {
-                        Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                        Event::Quit { .. } |
+                        Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                             game_done = true;
                             running = false;
-                        },
+                        }
                         Event::MouseButtonDown { mouse_btn: Mouse::Left, x, y, .. } => {
                             mouse_x = x;
                             mouse_y = y;
-                        },
+                        }
                         Event::MouseButtonUp { mouse_btn: Mouse::Left, .. } => {
                             if self.board.try_select_tile(mouse_x, mouse_y).is_err() {
                                 game_over = true;
                             }
-                        },
+                        }
                         Event::KeyUp { keycode: Some(Keycode::H), .. } => {
                             self.board.highlight_possible_matches();
-                        },
+                        }
                         Event::KeyUp { keycode: Some(Keycode::N), .. } => {
                             game_done = true;
-                        },
+                        }
                         Event::KeyUp { keycode: Some(Keycode::U), .. } => {
                             self.board.undo();
-                        },
+                        }
                         _ => {}
                     }
                 }
@@ -90,7 +91,11 @@ impl<'a> App<'a> {
                 self.renderer.present();
 
                 if game_over {
-                    show_simple_message_box(MessageBoxFlag::all(), "Game Over", "You have no possible moves left", None).ok();
+                    show_simple_message_box(MessageBoxFlag::all(),
+                                            "Game Over",
+                                            "You have no possible moves left",
+                                            None)
+                        .ok();
                     game_over = false;
                 }
 

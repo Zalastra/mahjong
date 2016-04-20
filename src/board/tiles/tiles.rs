@@ -11,7 +11,7 @@ use super::tile::Tile;
 use super::tile_type::TileType;
 
 pub struct Tiles {
-    tiles: Vec<Tile>
+    tiles: Vec<Tile>,
 }
 
 impl Tiles {
@@ -19,7 +19,7 @@ impl Tiles {
         self.tiles.iter()
     }
 
-    pub fn iter_playable<'a>(&'a self) -> Box<Iterator<Item=(usize, &'a Tile)> + 'a> {
+    pub fn iter_playable<'a>(&'a self) -> Box<Iterator<Item = (usize, &'a Tile)> + 'a> {
         Box::new(self.tiles.iter().enumerate().filter(|&(_, tile)| tile.is_playable()))
     }
 }
@@ -82,17 +82,22 @@ impl TilesBuilder {
 
         tiles.sort_by(|tile1, tile2| {
             use std::cmp::Ordering::*;
-            if tile1.z() < tile2.z() { Less }
-            else if tile1.z() > tile2.z() { Greater }
-            else if tile1.x() > tile2.x() { Less }
-            else if tile1.x() < tile2.x() { Greater }
-            else if tile1.y() < tile2.y() { Less }
-            else { Greater }
+            if tile1.z() < tile2.z() {
+                Less
+            } else if tile1.z() > tile2.z() {
+                Greater
+            } else if tile1.x() > tile2.x() {
+                Less
+            } else if tile1.x() < tile2.x() {
+                Greater
+            } else if tile1.y() < tile2.y() {
+                Less
+            } else {
+                Greater
+            }
         });
 
-        Tiles {
-            tiles: tiles
-        }
+        Tiles { tiles: tiles }
     }
 
     fn reset(&mut self) {
@@ -102,7 +107,9 @@ impl TilesBuilder {
     }
 
     fn get_tile_set(&mut self) -> Option<Result<(Tile, Tile), ()>> {
-        if self.available_positions.is_empty() { return None; }
+        if self.available_positions.is_empty() {
+            return None;
+        }
 
         let random_index = thread_rng().gen_range(0, self.remaining_tile_types.len() / 2);
         let tile_type1 = self.remaining_tile_types.remove(random_index);
@@ -112,7 +119,9 @@ impl TilesBuilder {
         let node1 = self.available_positions.swap_remove(random_index);
         self.used_positions.push(node1.clone());
 
-        if self.available_positions.is_empty() { return Some(Err(())); };
+        if self.available_positions.is_empty() {
+            return Some(Err(()));
+        };
 
         let random_index = thread_rng().gen_range(0, self.available_positions.len());
         let node2 = self.available_positions.swap_remove(random_index);
@@ -152,36 +161,33 @@ fn get_starting_positions(positions: &Positions) -> Vec<Rc<BoardPosition>> {
     let mut starting_positions = vec![];
 
     for graph in &ground_position_graphs {
-        let rows: HashSet<u8> = graph
-            .iter()
-            .map(|node| {
-                node.y()
-            })
-            .fold(RefCell::new(HashSet::new()), |rows, y| {
-                rows.borrow_mut().insert(y);
-                rows
-            })
-            .into_inner();
+        let rows: HashSet<u8> = graph.iter()
+                                     .map(|node| node.y())
+                                     .fold(RefCell::new(HashSet::new()), |rows, y| {
+                                         rows.borrow_mut().insert(y);
+                                         rows
+                                     })
+                                     .into_inner();
 
         match rows.len() {
             0 => unreachable!(),
             1 => {
                 let random_index = thread_rng().gen_range(0, graph.len());
                 starting_positions.push(graph[random_index].clone());
-            },
+            }
             3 => {
                 let mut add_random_node_from_row = |row| {
                     let count = graph.iter()
-                        .filter(|&node| node.y() == row)
-                        .count();
+                                     .filter(|&node| node.y() == row)
+                                     .count();
 
                     let random_index = thread_rng().gen_range(0, count);
                     let (_, node) = graph.iter()
-                        .filter(|&node| node.y() == row)
-                        .enumerate()
-                        .filter(|&(index, _)| index == random_index)
-                        .next()
-                        .unwrap();
+                                         .filter(|&node| node.y() == row)
+                                         .enumerate()
+                                         .filter(|&(index, _)| index == random_index)
+                                         .next()
+                                         .unwrap();
 
                     starting_positions.push(node.clone());
                 };
@@ -192,8 +198,9 @@ fn get_starting_positions(positions: &Positions) -> Vec<Rc<BoardPosition>> {
                 let row = *rows.iter().max().unwrap();
                 add_random_node_from_row(row);
 
-            },
-            _ => unimplemented!(), // TODO: implement the possibility to have an arbitrary row count
+            }
+            _ => unimplemented!(),
+            // TODO: implement the possibility to have an arbitrary row count
         }
     }
 
@@ -210,15 +217,21 @@ fn get_ground_positions(positions: &Positions) -> Vec<Vec<Rc<BoardPosition>>> {
             fn traverse_nodes(position: Rc<BoardPosition>,
                               visited: &mut HashSet<Rc<BoardPosition>>,
                               graph: &mut Vec<Rc<BoardPosition>>) {
-                if visited.contains(&position) { return; }
+                if visited.contains(&position) {
+                    return;
+                }
                 visited.insert(position.clone());
-                if position.z() == 0 { graph.push(position.clone()); }
+                if position.z() == 0 {
+                    graph.push(position.clone());
+                }
                 for neighbour in position.neighbours().iter() {
                     traverse_nodes(neighbour.position().clone(), visited, graph);
                 }
             }
 
-            traverse_nodes(position.clone(), &mut visited_nodes, ground_node_graphs.last_mut().unwrap());
+            traverse_nodes(position.clone(),
+                           &mut visited_nodes,
+                           ground_node_graphs.last_mut().unwrap());
         }
     }
     ground_node_graphs

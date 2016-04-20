@@ -6,30 +6,29 @@ use std::slice::Iter;
 use self::Direction::*;
 
 pub struct Positions {
-    positions: Vec<Rc<BoardPosition>>
+    positions: Vec<Rc<BoardPosition>>,
 }
 
 impl Positions {
     pub fn new(positions: &[u32; 144]) -> Self {
-        let positions_vec =
-            positions.iter()
-                     .map(|&position| {
-                         let x = ((position % 1024) % 32) as u8;
-                         let y = ((position % 1024) / 32) as u8;
-                         let z = (position / 1024) as u8;
-                         BoardPosition::new(x, y, z)
-                     })
-                     .collect::<Vec<_>>();
+        let positions_vec = positions.iter()
+                                     .map(|&position| {
+                                         let x = ((position % 1024) % 32) as u8;
+                                         let y = ((position % 1024) / 32) as u8;
+                                         let z = (position / 1024) as u8;
+                                         BoardPosition::new(x, y, z)
+                                     })
+                                     .collect::<Vec<_>>();
 
         for position1 in positions_vec.iter() {
             for position2 in positions_vec.iter() {
-                if position1 == position2 { continue; }
+                if position1 == position2 {
+                    continue;
+                }
                 BoardPosition::test_for_neighbouring(position1.clone(), position2.clone())
             }
         }
-        Positions {
-            positions: positions_vec
-        }
+        Positions { positions: positions_vec }
     }
 
     pub fn iter(&self) -> Iter<Rc<BoardPosition>> {
@@ -63,17 +62,21 @@ impl Position {
 
     fn from(position: &Position, direction: Direction) -> Self {
         match direction {
-            Up => Position {
-                x: [position.x[0], position.x[1]],
-                y: [position.y[0], position.y[1]],
-                z: position.z + 1,
-            },
-            Right => Position {
-                x: [position.x[0] + 1, position.x[1] + 1],
-                y: [position.y[0], position.y[1]],
-                z: position.z,
-            },
-            _ => panic!("dont call from with Down or Left")
+            Up => {
+                Position {
+                    x: [position.x[0], position.x[1]],
+                    y: [position.y[0], position.y[1]],
+                    z: position.z + 1,
+                }
+            }
+            Right => {
+                Position {
+                    x: [position.x[0] + 1, position.x[1] + 1],
+                    y: [position.y[0], position.y[1]],
+                    z: position.z,
+                }
+            }
+            _ => panic!("dont call from with Down or Left"),
         }
     }
 }
@@ -139,12 +142,10 @@ impl BoardPosition {
         }
         if neighbours!().any(|neighbour| neighbour.direction == Up) {
             false
-        }
-        else if neighbours!().any(|neighbour| neighbour.direction == Left)
-            && neighbours!().any(|neighbour| neighbour.direction == Right) {
+        } else if neighbours!().any(|neighbour| neighbour.direction == Left) &&
+           neighbours!().any(|neighbour| neighbour.direction == Right) {
             false
-        }
-        else {
+        } else {
             true
         }
     }
@@ -154,7 +155,9 @@ impl BoardPosition {
     }
 
     pub fn test_for_neighbouring(position1: Rc<BoardPosition>, position2: Rc<BoardPosition>) {
-        if position1.is_neighbour_with(position2.clone()) { return }
+        if position1.is_neighbour_with(position2.clone()) {
+            return;
+        }
 
         if position1.overlaps_with(Position::from(&position2.position, Up)) {
             position1.add_neighbour(NeighbourPosition::new(position2.clone(), Down));
@@ -185,10 +188,12 @@ impl BoardPosition {
 
     fn overlaps_with(&self, position: Position) -> bool {
         if !(self.position.x[0] == position.x[0] || self.position.x[0] == position.x[1] ||
-            self.position.x[1] == position.x[0] || self.position.x[1] == position.x[1]) {
+             self.position.x[1] == position.x[0] ||
+             self.position.x[1] == position.x[1]) {
             false
         } else if !(self.position.y[0] == position.y[0] || self.position.y[0] == position.y[1] ||
-            self.position.y[1] == position.y[0] || self.position.y[1] == position.y[1]) {
+             self.position.y[1] == position.y[0] ||
+             self.position.y[1] == position.y[1]) {
             false
         } else if self.position.z == position.z {
             true
@@ -204,10 +209,12 @@ impl PartialEq for BoardPosition {
     }
 }
 
-impl Eq for BoardPosition { }
+impl Eq for BoardPosition {}
 
 impl Hash for BoardPosition {
-    fn hash<H>(&self, state: &mut H) where H: Hasher {
+    fn hash<H>(&self, state: &mut H)
+        where H: Hasher
+    {
         let mut hash = (self.position.x[0] as u32) << 16;
         hash |= (self.position.y[0] as u32) << 8;
         hash |= self.position.z as u32;
