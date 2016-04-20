@@ -78,8 +78,7 @@ impl TileType {
     }
 }
 
-// TODO: should be removed if we dont need console printing for debugging
-impl fmt::Display for TileType {
+impl fmt::Debug for TileType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match *self {
             BallOne => "o1",

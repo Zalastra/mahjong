@@ -76,7 +76,7 @@ impl Tile {
 
 impl fmt::Debug for Tile {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}|{}", self.position.z(), self.kind)
+        write!(f, "{}|{:?}", self.position.z(), self.kind)
     }
 }
 
