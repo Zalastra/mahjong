@@ -1,149 +1,190 @@
-use std::cell::RefCell;
-use std::collections::hash_set::HashSet;
-use std::ops::{Index, IndexMut};
-use std::rc::Rc;
-use std::slice::Iter;
+use std::collections::HashMap;
+use std::hash::Hasher;
+use std::path::{Path, PathBuf};
 
 use rand::{thread_rng, Rng};
+use sdl2::render::{Renderer, Texture};
+use sdl2_image::LoadTexture;
 
-use super::position::{BoardPosition, Positions};
-use super::tile::Tile;
-use super::tile_type::TileType;
+use super::positions::*;
+use super::models::Models;
+use super::types::TileType;
+
+use self::TextureId::*;
+
+static ERROR_MESSAGE: &'static str = "error loading texture";
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct TileId(usize);
 
 pub struct Tiles {
-    tiles: Vec<Tile>,
+    positions: Positions,
+    types: Vec<TileType>,
+    models: Models,
+    textures: HashMap<TextureId, Texture>,
 }
 
 impl Tiles {
-    pub fn iter(&self) -> Iter<Tile> {
-        self.tiles.iter()
+    pub fn new(raw_positions: &[(u8, u8, u8); 144], renderer: &Renderer) -> Self {
+        let positions = Positions::new(raw_positions);
+        let models = Models::new(&positions);
+        let textures = create_textures(renderer);
+
+        let mut tiles = Tiles {
+            positions: positions,
+            types: Vec::new(),
+            models: models,
+            textures: textures,
+        };
+        tiles.shuffle_types();
+        tiles.positions.update_states();
+        tiles
     }
 
-    pub fn iter_playable<'a>(&'a self) -> Box<Iterator<Item = (usize, &'a Tile)> + 'a> {
-        Box::new(self.tiles.iter().enumerate().filter(|&(_, tile)| tile.is_playable()))
+    pub fn reset(&mut self) {
+        self.positions.reset();
+        self.shuffle_types();
+        self.positions.update_states();
     }
-}
 
-impl Index<usize> for Tiles {
-    type Output = Tile;
+    pub fn render(&self, renderer: &mut Renderer) {
+        let side_tex = self.textures.get(&TextureId::Side).unwrap();
+        let bottom_tex = self.textures.get(&TextureId::Bottom).unwrap();
 
-    fn index(&self, _index: usize) -> &Tile {
-        &self.tiles[_index]
-    }
-}
+        for ((tile_type, model), position) in self.types.iter().zip(self.models.iter()).zip(self.positions.iter()) {
+            if !position.is_occupied() { continue; }
 
-impl IndexMut<usize> for Tiles {
-    fn index_mut(&mut self, _index: usize) -> &mut Tile {
-        &mut self.tiles[_index]
-    }
-}
+            let face_tex = self.textures.get(&TextureId::Face(*tile_type, model.is_highlighted())).unwrap();
 
-pub struct TilesBuilder {
-    all_positions: Positions,
-    remaining_tile_types: Vec<TileType>,
-    available_positions: Vec<Rc<BoardPosition>>,
-    used_positions: Vec<Rc<BoardPosition>>,
-}
-
-impl TilesBuilder {
-    pub fn new(positions: &[u32; 144]) -> TilesBuilder {
-        let all_positions = Positions::new(positions);
-        let starting_positions = get_starting_positions(&all_positions);
-        TilesBuilder {
-            all_positions: all_positions,
-            remaining_tile_types: get_tile_types(),
-            available_positions: starting_positions,
-            used_positions: Vec::new(),
+            renderer.copy(side_tex, None, Some(model.side()));
+            renderer.copy(bottom_tex, None, Some(model.bottom()));
+            renderer.copy(face_tex, None, Some(model.face()));
         }
     }
 
-    pub fn build(mut self) -> Tiles {
-        let mut tiles = Vec::new();
-        let mut valid = false;
-        while !valid {
-            valid = true;
+    pub fn play_tile(&mut self, tile: TileId) {
+        self.positions[tile.0].empty();
+    }
 
-            while let Some(tiles_result) = self.get_tile_set() {
-                if let Ok((tile1, tile2)) = tiles_result {
-                    tiles.push(tile1);
-                    tiles.push(tile2);
-                } else {
-                    valid = false;
-                    break;
+    pub fn reset_tile(&mut self, tile: TileId) {
+        self.positions[tile.0].occupy();
+    }
+
+    pub fn highlight_tile(&mut self, tile: TileId) {
+        self.models[tile.0].highlight();
+    }
+
+    pub fn dehighlight_tile(&mut self, tile: TileId) {
+        self.models[tile.0].dehighlight()
+    }
+
+    pub fn are_matching(&self, tile1: &TileId, tile2: &TileId) -> bool {
+        self.types[tile1.0].matches(&self.types[tile2.0])
+    }
+
+    pub fn playable_tiles(&self) -> Vec<TileId> {
+        self.positions
+            .iter()
+            .enumerate()
+            .filter(|&(_, position)| position.is_playable() )
+            .map(|(index, _)| TileId(index))
+            .collect()
+    }
+
+    pub fn find_playable_tile_by_coord(&self, x: i32, y: i32) -> Option<TileId> {
+        for (index, model) in self.models.iter().enumerate().rev() {
+            if self.positions[index].is_playable() {
+                if model.hit_test(x, y) {
+                    return Some(TileId(index));
                 }
             }
-
-            // if board isn't valid we clear the vec and try again
-            if !valid {
-                tiles.clear();
-                self.reset();
-            }
         }
-
-        tiles.sort_by(|tile1, tile2| {
-            use std::cmp::Ordering::*;
-            if tile1.z() < tile2.z() {
-                Less
-            } else if tile1.z() > tile2.z() {
-                Greater
-            } else if tile1.x() > tile2.x() {
-                Less
-            } else if tile1.x() < tile2.x() {
-                Greater
-            } else if tile1.y() < tile2.y() {
-                Less
-            } else {
-                Greater
-            }
-        });
-
-        Tiles { tiles: tiles }
+        None
     }
 
-    fn reset(&mut self) {
-        self.remaining_tile_types = get_tile_types();
-        self.available_positions = get_starting_positions(&self.all_positions);
-        self.used_positions = Vec::new();
-    }
-
-    fn get_tile_set(&mut self) -> Option<Result<(Tile, Tile), ()>> {
-        if self.available_positions.is_empty() {
-            return None;
-        }
-
-        let random_index = thread_rng().gen_range(0, self.remaining_tile_types.len() / 2);
-        let tile_type1 = self.remaining_tile_types.remove(random_index);
-        let tile_type2 = self.remaining_tile_types.remove(random_index);
-
-        let random_index = thread_rng().gen_range(0, self.available_positions.len());
-        let node1 = self.available_positions.swap_remove(random_index);
-        self.used_positions.push(node1.clone());
-
-        if self.available_positions.is_empty() {
-            return Some(Err(()));
-        };
-
-        let random_index = thread_rng().gen_range(0, self.available_positions.len());
-        let node2 = self.available_positions.swap_remove(random_index);
-        self.used_positions.push(node2.clone());
-
-        for neighbour in node1.neighbours().iter() {
-            let node = &neighbour.position();
-            if !self.available_positions.contains(node) && !self.used_positions.contains(node) {
-                self.available_positions.push(node.clone());
+    fn shuffle_types(&mut self) {
+        loop {
+            match self.try_shuffle_types() {
+                Ok(_) => break,
+                Err(_) => self.positions.reset()
             }
         }
-        for neighbour in node2.neighbours().iter() {
-            let node = &neighbour.position();
-            if !self.available_positions.contains(node) && !self.used_positions.contains(node) {
-                self.available_positions.push(node.clone());
+    }
+
+    fn try_shuffle_types(&mut self) -> Result<(), ()> {
+        let mut available_types = get_tile_types();
+        let mut used_positions = 0;
+        let mut types = [None; 144];
+        
+        loop {
+            let mut positions = self.placable_positions();
+            
+            if positions.len() < 2 {
+                return Err(());
+            }
+
+            let random_index = thread_rng().gen_range(0, available_types.len() / 2) * 2;
+            let tile_type1 = available_types.swap_remove(random_index + 1);
+            let tile_type2 = available_types.swap_remove(random_index);
+
+            let random_index = thread_rng().gen_range(0, positions.len());
+            let tile_id1 = positions.swap_remove(random_index);
+
+            let random_index = thread_rng().gen_range(0, positions.len());
+            let tile_id2 = positions.swap_remove(random_index);
+
+            self.positions[tile_id1.0].occupy();
+            self.positions[tile_id2.0].occupy();
+
+            types[tile_id1.0] = Some(tile_type1);
+            types[tile_id2.0] = Some(tile_type2);
+
+            used_positions += 2;
+
+            if used_positions == self.positions.len() {
+                self.types = types.iter().map(|opt_type| opt_type.unwrap()).collect();
+                return Ok(());
             }
         }
-
-        let tile1 = Tile::new(node1, tile_type1);
-        let tile2 = Tile::new(node2, tile_type2);
-        Some(Ok((tile1, tile2)))
     }
+
+    fn placable_positions(&self) -> Vec<TileId> {
+        self.positions
+            .iter()
+            .enumerate()
+            .filter(|&(_, position)| position.is_placable())
+            .map(|(index, _)| TileId(index))
+            .collect()
+    }
+}
+
+fn create_textures(renderer: &Renderer) -> HashMap<TextureId, Texture> {
+    let mut textures = HashMap::new();
+
+    for tile_type in TileType::iter() {
+        let mut texture_path_buf = PathBuf::from("img/");
+        texture_path_buf.push(tile_type.filename_texture());
+        let texture_path = texture_path_buf.as_path();
+
+        let mut texture = renderer.load_texture(texture_path).expect(ERROR_MESSAGE);
+        texture.set_color_mod(255, 127, 127);
+        textures.insert(Face(*tile_type, true), texture);
+
+        let texture = renderer.load_texture(texture_path).expect(ERROR_MESSAGE);
+        textures.insert(Face(*tile_type, false), texture);
+    }
+
+    let side_texture = renderer.load_texture(Path::new("img/TileSide.png"))
+                                .expect(ERROR_MESSAGE);
+    let bottom_texture = renderer.load_texture(Path::new("img/TileBottom.png"))
+                                    .expect(ERROR_MESSAGE);
+
+    textures.insert(Side, side_texture);
+    textures.insert(Bottom, bottom_texture);
+
+    textures.shrink_to_fit();
+
+    textures
 }
 
 fn get_tile_types() -> Vec<TileType> {
@@ -156,83 +197,9 @@ fn get_tile_types() -> Vec<TileType> {
     tile_types
 }
 
-fn get_starting_positions(positions: &Positions) -> Vec<Rc<BoardPosition>> {
-    let ground_position_graphs = get_ground_positions(positions);
-    let mut starting_positions = vec![];
-
-    for graph in &ground_position_graphs {
-        let rows: HashSet<u8> = graph.iter()
-                                     .map(|node| node.y())
-                                     .fold(RefCell::new(HashSet::new()), |rows, y| {
-                                         rows.borrow_mut().insert(y);
-                                         rows
-                                     })
-                                     .into_inner();
-
-        match rows.len() {
-            0 => unreachable!(),
-            1 => {
-                let random_index = thread_rng().gen_range(0, graph.len());
-                starting_positions.push(graph[random_index].clone());
-            }
-            3 => {
-                let mut add_random_node_from_row = |row| {
-                    let count = graph.iter()
-                                     .filter(|&node| node.y() == row)
-                                     .count();
-
-                    let random_index = thread_rng().gen_range(0, count);
-                    let (_, node) = graph.iter()
-                                         .filter(|&node| node.y() == row)
-                                         .enumerate()
-                                         .filter(|&(index, _)| index == random_index)
-                                         .next()
-                                         .unwrap();
-
-                    starting_positions.push(node.clone());
-                };
-
-                let row = *rows.iter().min().unwrap();
-                add_random_node_from_row(row);
-
-                let row = *rows.iter().max().unwrap();
-                add_random_node_from_row(row);
-
-            }
-            _ => unimplemented!(),
-            // TODO: implement the possibility to have an arbitrary row count
-        }
-    }
-
-    starting_positions
-}
-
-fn get_ground_positions(positions: &Positions) -> Vec<Vec<Rc<BoardPosition>>> {
-    let mut ground_node_graphs: Vec<Vec<Rc<BoardPosition>>> = vec![];
-    let mut visited_nodes: HashSet<Rc<BoardPosition>> = HashSet::new();
-    for position in positions.iter() {
-        if !visited_nodes.contains(position) {
-            ground_node_graphs.push(vec![]);
-
-            fn traverse_nodes(position: Rc<BoardPosition>,
-                              visited: &mut HashSet<Rc<BoardPosition>>,
-                              graph: &mut Vec<Rc<BoardPosition>>) {
-                if visited.contains(&position) {
-                    return;
-                }
-                visited.insert(position.clone());
-                if position.z() == 0 {
-                    graph.push(position.clone());
-                }
-                for neighbour in position.neighbours().iter() {
-                    traverse_nodes(neighbour.position().clone(), visited, graph);
-                }
-            }
-
-            traverse_nodes(position.clone(),
-                           &mut visited_nodes,
-                           ground_node_graphs.last_mut().unwrap());
-        }
-    }
-    ground_node_graphs
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
+pub enum TextureId {
+    Face(TileType, bool),
+    Bottom,
+    Side,
 }

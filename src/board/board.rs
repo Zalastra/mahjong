@@ -3,54 +3,55 @@ use std::time::Instant;
 
 use sdl2::render::Renderer;
 
-use super::tiles::{Tile, Tiles, TilesBuilder, TileTextures};
+use super::tiles::{TileId, Tiles};
 
 pub struct Board {
     tiles: Tiles,
-    played: Vec<(usize, usize)>,
-    selected_tile: Option<usize>,
+    played: Vec<(TileId, TileId)>,
+    selected_tile: Option<TileId>,
     hints: Option<Hints>,
-    textures: TileTextures,
 }
 
 impl Board {
     pub fn new(renderer: &Renderer) -> Board {
-
-        let mut textures = TileTextures::new();
-        textures.load_textures(renderer);
-
-        let tiles = TilesBuilder::new(&POSITIONS).build();
+        let tiles = Tiles::new(&POSITIONS, renderer);
 
         Board {
             tiles: tiles,
             played: Vec::new(),
             selected_tile: None,
             hints: None,
-            textures: textures,
         }
     }
 
+    pub fn reset(&mut self) {
+        self.tiles.reset();
+        self.played = Vec::new();
+        self.selected_tile = None;
+        self.hints = None;
+    }
+
     pub fn try_select_tile(&mut self, mouse_x: i32, mouse_y: i32) -> Result<(), GameOver> {
-        if let Some(index1) = self.find_tile_index_by_coord(mouse_x, mouse_y) {
+        if let Some(tile1) = self.tiles.find_playable_tile_by_coord(mouse_x, mouse_y) {
             self.stop_hints();
 
             match self.selected_tile {
-                Some(index2) => {
+                Some(tile2) => {
                     // deselect tile
-                    if index1 == index2 {
+                    if tile1 == tile2 {
                         self.deselect_tile();
                         return Ok(());
                     }
 
                     // test tile match
-                    if !Tile::matches(&self.tiles[index1], &self.tiles[index2]) {
+                    if !self.tiles.are_matching(&tile1, &tile2) {
                         return Ok(());
                     }
 
                     // valid match
-                    self.tiles[index1].play();
-                    self.tiles[index2].play();
-                    self.played.push((index1, index2));
+                    self.tiles.play_tile(tile1);
+                    self.tiles.play_tile(tile2);
+                    self.played.push((tile1, tile2));
 
                     self.deselect_tile();
 
@@ -58,7 +59,7 @@ impl Board {
                         return Err(GameOver);
                     }
                 }
-                None => self.select_tile(index1),
+                None => self.select_tile(tile1),
             }
         }
         Ok(())
@@ -68,10 +69,9 @@ impl Board {
         self.deselect_tile();
         self.stop_hints();
 
-        if !self.played.is_empty() {
-            let (index1, index2) = self.played.pop().unwrap();
-            self.tiles[index1].reset();
-            self.tiles[index2].reset();
+        if let Some((tile1, tile2)) = self.played.pop() {
+            self.tiles.reset_tile(tile1);
+            self.tiles.reset_tile(tile2);
         }
     }
 
@@ -96,7 +96,7 @@ impl Board {
             let index = (hints.start_time.elapsed().as_secs() / 2) as usize;
 
             if index > hints.current_index {
-                hints.sets[hints.current_index].unhighlight(&mut self.tiles);
+                hints.sets[hints.current_index].dehighlight(&mut self.tiles);
                 if index >= hints.sets.len() {
                     done = true;
                 } else {
@@ -111,36 +111,30 @@ impl Board {
     }
 
     pub fn render(&self, renderer: &mut Renderer) {
-        for tile in self.tiles.iter() {
-            if tile.is_played() {
-                continue;
-            }
-
-            tile.render(renderer, &self.textures)
-        }
+        self.tiles.render(renderer);
     }
 
     fn get_available_matches(&self) -> Result<Vec<HintSet>, NoMatch> {
         let mut sets = Vec::new();
-        let mut used_indices = Vec::new();
+        let mut used_tiles = Vec::new();
 
-        for (index, tile) in self.tiles.iter_playable() {
-            if used_indices.contains(&index) {
+        for tile in self.tiles.playable_tiles().iter() {
+            if used_tiles.contains(tile) {
                 continue;
             }
 
-            let mut set = HintSet::new(index);
-            for (index2, tile2) in self.tiles.iter_playable() {
-                if !tile.matches(tile2) || index == index2 {
+            let mut set = HintSet::new(*tile);
+            for tile2 in self.tiles.playable_tiles().iter() {
+                if !self.tiles.are_matching(tile, tile2) || tile == tile2 {
                     continue;
                 }
 
-                used_indices.push(index2);
-                set.add(index2);
+                used_tiles.push(*tile2);
+                set.add(*tile2);
             }
 
             if set.0[1] != None {
-                used_indices.push(index);
+                used_tiles.push(*tile);
                 sets.push(set);
             }
         }
@@ -152,40 +146,24 @@ impl Board {
         }
     }
 
-    fn select_tile(&mut self, index: usize) {
-        self.tiles[index].highlight();
-        self.selected_tile = Some(index);
+    fn select_tile(&mut self, tile: TileId) {
+        self.tiles.highlight_tile(tile);
+        self.selected_tile = Some(tile);
     }
 
     fn deselect_tile(&mut self) {
-        if let Some(index) = self.selected_tile {
-            self.tiles[index].unhighlight();
+        if let Some(tile) = self.selected_tile {
+            self.tiles.dehighlight_tile(tile)
         }
         self.selected_tile = None;
     }
 
     fn stop_hints(&mut self) {
         if let Some(hints) = self.hints.as_mut() {
-            hints.sets[hints.current_index].unhighlight(&mut self.tiles);
+            hints.sets[hints.current_index].dehighlight(&mut self.tiles);
         }
 
         self.hints = None;
-    }
-
-    fn find_tile_index_by_coord(&self, x: i32, y: i32) -> Option<usize> {
-        for (index, tile) in self.tiles.iter().enumerate().rev() {
-            if !tile.is_playable() {
-                continue;
-            }
-
-            let tile_x = tile.x() as i32 * 23 + tile.z() as i32 * 5 + 15;
-            let tile_y = tile.y() as i32 * 29 - tile.z() as i32 * 5 + 15;
-
-            if x >= tile_x && x <= tile_x + 46 && y >= tile_y && y <= tile_y + 57 {
-                return Some(index);
-            }
-        }
-        None
     }
 }
 
@@ -199,7 +177,7 @@ struct Hints {
     current_index: usize,
 }
 
-struct HintSet([Option<usize>; 4]);
+struct HintSet([Option<TileId>; 4]);
 use std::fmt;
 impl Debug for HintSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -208,63 +186,54 @@ impl Debug for HintSet {
 }
 
 impl HintSet {
-    fn new(index: usize) -> HintSet {
-        HintSet([Some(index), None, None, None])
+    fn new(tile: TileId) -> HintSet {
+        HintSet([Some(tile), None, None, None])
     }
 
-    fn add(&mut self, index: usize) {
-        for opt_index in self.0.iter_mut() {
-            if *opt_index == None {
-                *opt_index = Some(index);
+    fn add(&mut self, tile: TileId) {
+        for opt_tile in self.0.iter_mut() {
+            if *opt_tile == None {
+                *opt_tile = Some(tile);
                 break;
             }
         }
     }
 
     fn highlight(&self, tiles: &mut Tiles) {
-        for opt_index in self.0.iter() {
-            if let Some(index) = *opt_index {
-                tiles[index].highlight();
+        for opt_tile in self.0.iter() {
+            if let Some(tile) = *opt_tile {
+                tiles.highlight_tile(tile);
             }
         }
     }
 
-    fn unhighlight(&self, tiles: &mut Tiles) {
-        for opt_index in self.0.iter() {
-            if let Some(index) = *opt_index {
-                tiles[index].unhighlight();
+    fn dehighlight(&self, tiles: &mut Tiles) {
+        for opt_tile in self.0.iter() {
+            if let Some(tile) = *opt_tile {
+                tiles.dehighlight_tile(tile)
             }
         }
     }
 }
 
-// TODO: put positions in a file and read them from disk
-//       use human readable format
-static POSITIONS: [u32; 144] = [
-    4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
-    72, 74, 76, 78, 80, 82, 84, 86,
-    134, 136, 138, 140, 142, 144, 146, 148, 150, 152,
-    196, 198, 200, 202, 204, 206, 208, 210, 212, 214, 216, 218,
-    224, 226, 252,
-    260, 262, 264, 266, 268, 270, 272, 274, 276, 278, 280, 282,
-    326, 328, 330, 332, 334, 336, 338, 340, 342, 344,
-    392, 394, 396, 398, 400, 402, 404, 406,
-    452, 454, 456, 458, 460, 462, 464, 466, 468, 470, 472, 474,
-
-    1098, 1100, 1102, 1104, 1106, 1108,
-    1162, 1164, 1166, 1168, 1170, 1172,
-    1226, 1228, 1230, 1232, 1234, 1236,
-    1290, 1292, 1294, 1296, 1298, 1300,
-    1354, 1356, 1358, 1360, 1362, 1364,
-    1418, 1420, 1422, 1424, 1426, 1428,
-
-    2188, 2190, 2192, 2194,
-    2252, 2254, 2256, 2258,
-    2316, 2318, 2320, 2322,
-    2380, 2382, 2384, 2386,
-
-    3278, 3280,
-    3342, 3344,
-
-    4335,
-];
+// TODO: add fmt exception
+static POSITIONS: [(u8, u8, u8); 144] = [(4, 0, 0), (6, 0, 0), (8, 0, 0), (10, 0, 0), (12, 0, 0),
+    (14, 0, 0), (16, 0, 0), (18, 0, 0), (20, 0, 0), (22, 0, 0), (24, 0, 0), (26, 0, 0), (8, 2, 0),
+    (10, 2, 0), (12, 2, 0), (14, 2, 0), (16, 2, 0), (18, 2, 0), (20, 2, 0), (22, 2, 0), (6, 4, 0),
+    (8, 4, 0), (10, 4, 0), (12, 4, 0), (14, 4, 0), (16, 4, 0), (18, 4, 0), (20, 4, 0), (22, 4, 0),
+    (24, 4, 0), (4, 6, 0), (6, 6, 0), (8, 6, 0), (10, 6, 0), (12, 6, 0), (14, 6, 0), (16, 6, 0),
+    (18, 6, 0), (20, 6, 0), (22, 6, 0), (24, 6, 0), (26, 6, 0), (0, 7, 0), (2, 7, 0), (28, 7, 0),
+    (4, 8, 0), (6, 8, 0), (8, 8, 0), (10, 8, 0), (12, 8, 0), (14, 8, 0), (16, 8, 0), (18, 8, 0),
+    (20, 8, 0), (22, 8, 0), (24, 8, 0), (26, 8, 0), (6, 10, 0), (8, 10, 0), (10, 10, 0),
+    (12, 10, 0), (14, 10, 0), (16, 10, 0), (18, 10, 0), (20, 10, 0), (22, 10, 0), (24, 10, 0),
+    (8, 12, 0), (10, 12, 0), (12, 12, 0), (14, 12, 0), (16, 12, 0), (18, 12, 0), (20, 12, 0),
+    (22, 12, 0), (4, 14, 0), (6, 14, 0), (8, 14, 0), (10, 14, 0), (12, 14, 0), (14, 14, 0),
+    (16, 14, 0), (18, 14, 0), (20, 14, 0), (22, 14, 0), (24, 14, 0), (26, 14, 0), (10, 2, 1),
+    (12, 2, 1), (14, 2, 1), (16, 2, 1), (18, 2, 1), (20, 2, 1), (10, 4, 1), (12, 4, 1), (14, 4, 1),
+    (16, 4, 1), (18, 4, 1), (20, 4, 1), (10, 6, 1), (12, 6, 1), (14, 6, 1), (16, 6, 1), (18, 6, 1),
+    (20, 6, 1), (10, 8, 1), (12, 8, 1), (14, 8, 1), (16, 8, 1), (18, 8, 1), (20, 8, 1), (10, 10, 1),
+    (12, 10, 1), (14, 10, 1), (16, 10, 1), (18, 10, 1), (20, 10, 1), (10, 12, 1), (12, 12, 1),
+    (14, 12, 1), (16, 12, 1), (18, 12, 1), (20, 12, 1), (12, 4, 2), (14, 4, 2), (16, 4, 2),
+    (18, 4, 2), (12, 6, 2), (14, 6, 2), (16, 6, 2), (18, 6, 2), (12, 8, 2), (14, 8, 2), (16, 8, 2),
+    (18, 8, 2), (12, 10, 2), (14, 10, 2), (16, 10, 2), (18, 10, 2), (14, 6, 3), (16, 6, 3),
+    (14, 8, 3), (16, 8, 3), (15, 7, 4)];

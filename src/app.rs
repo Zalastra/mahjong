@@ -46,65 +46,57 @@ impl<'a> App<'a> {
 
     pub fn run(&mut self) {
         let mut running = true;
-        let mut game_done = false;
         let mut game_over = false;
 
         let mut mouse_x = 0;
         let mut mouse_y = 0;
 
         while running {
-            while !game_done {
-                for event in self.event_pump.poll_iter() {
-                    match event {
-                        Event::Quit { .. } |
-                        Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                            game_done = true;
-                            running = false;
-                        }
-                        Event::MouseButtonDown { mouse_btn: Mouse::Left, x, y, .. } => {
-                            mouse_x = x;
-                            mouse_y = y;
-                        }
-                        Event::MouseButtonUp { mouse_btn: Mouse::Left, .. } => {
-                            if self.board.try_select_tile(mouse_x, mouse_y).is_err() {
-                                game_over = true;
-                            }
-                        }
-                        Event::KeyUp { keycode: Some(Keycode::H), .. } => {
-                            self.board.highlight_possible_matches();
-                        }
-                        Event::KeyUp { keycode: Some(Keycode::N), .. } => {
-                            game_done = true;
-                        }
-                        Event::KeyUp { keycode: Some(Keycode::U), .. } => {
-                            self.board.undo();
-                        }
-                        _ => {}
+            for event in self.event_pump.poll_iter() {
+                match event {
+                    Event::Quit { .. } |
+                    Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                        running = false;
                     }
+                    Event::MouseButtonDown { mouse_btn: Mouse::Left, x, y, .. } => {
+                        mouse_x = x;
+                        mouse_y = y;
+                    }
+                    Event::MouseButtonUp { mouse_btn: Mouse::Left, .. } => {
+                        if self.board.try_select_tile(mouse_x, mouse_y).is_err() {
+                            game_over = true;
+                        }
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::H), .. } => {
+                        self.board.highlight_possible_matches();
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::N), .. } => {
+                        self.board.reset();
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::U), .. } => {
+                        self.board.undo();
+                    }
+                    _ => {}
                 }
-
-                self.board.update();
-
-                self.renderer.set_draw_color(Color::RGB(0, 0, 0));
-                self.renderer.clear();
-                self.board.render(&mut self.renderer);
-                self.renderer.present();
-
-                if game_over {
-                    show_simple_message_box(MessageBoxFlag::all(),
-                                            "Game Over",
-                                            "You have no possible moves left",
-                                            None)
-                        .ok();
-                    game_over = false;
-                }
-
-                thread::sleep(Duration::from_millis(10));
             }
-            if running {
-                self.board = Board::new(&self.renderer);
-                game_done = false;
+
+            self.board.update();
+
+            self.renderer.set_draw_color(Color::RGB(0, 0, 0));
+            self.renderer.clear();
+            self.board.render(&mut self.renderer);
+            self.renderer.present();
+
+            if game_over {
+                show_simple_message_box(MessageBoxFlag::all(),
+                                        "Game Over",
+                                        "You have no possible moves left",
+                                        None)
+                    .ok();
+                game_over = false;
             }
+
+            thread::sleep(Duration::from_millis(10));
         }
     }
 }
