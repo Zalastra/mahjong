@@ -1,10 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use std::rc::Rc;
-
 use sdl2::rect::Rect;
-
-use super::positions::BoardPosition;
 
 static TILE_WIDTH: u32 = 46;
 static TILE_HEIGHT: u32 = 57; // TODO: change texture height to even number
@@ -14,15 +10,14 @@ static TILE_BOTTOM_HEIGHT: u32 = 5;
 pub struct Models(Vec<TileModel>);
 
 impl Models {
-    pub fn new(board_positions: &[Rc<BoardPosition>]) -> Models {
-        let mut models = Vec::new();
-        
-        for pos in board_positions.iter() {
-            let x = pos.x() as i32 * 23 + pos.z() as i32 * TILE_SIDE_WIDTH as i32 + 20;
-            let y = pos.y() as i32 * 29 - pos.z() as i32 * TILE_BOTTOM_HEIGHT as i32 + 15;
-            models.push(TileModel::new(x, y));
-        }
-        models.shrink_to_fit();
+    pub fn new(positions: &[(u8, u8, u8); 144]) -> Models {
+        let models = positions.iter()
+            .map(|&(x, y, z)| {
+                let model_x = x as i32 * 23 + z as i32 * TILE_SIDE_WIDTH as i32 + 20;
+                let model_y = y as i32 * 29 - z as i32 * TILE_BOTTOM_HEIGHT as i32 + 15;
+                TileModel::new(model_x, model_y)
+            })
+            .collect::<Vec<_>>();
 
         Models(models)
     }
@@ -55,8 +50,10 @@ impl TileModel {
     fn new(x: i32, y: i32) -> Self {
         TileModel {
             face_rect: Rect::new(x, y, TILE_WIDTH, TILE_HEIGHT),
-            side_rect: Rect::new(x - TILE_SIDE_WIDTH as i32, y, 
-                TILE_SIDE_WIDTH, TILE_HEIGHT + TILE_BOTTOM_HEIGHT),
+            side_rect: Rect::new(x - TILE_SIDE_WIDTH as i32,
+                                 y,
+                                 TILE_SIDE_WIDTH,
+                                 TILE_HEIGHT + TILE_BOTTOM_HEIGHT),
             bottom_rect: Rect::new(x, y + TILE_HEIGHT as i32, TILE_WIDTH, TILE_BOTTOM_HEIGHT),
             highlighted: false,
         }
@@ -95,8 +92,8 @@ impl TileModel {
     // TODO: better name needed?
     #[inline]
     pub fn hit_test(&self, x: i32, y: i32) -> bool {
-        if x >= self.x() && x <= self.x() + TILE_WIDTH as i32 &&
-                y >= self.y() && y <= self.y() + TILE_HEIGHT as i32 {
+        if x >= self.x() && x <= self.x() + TILE_WIDTH as i32 && y >= self.y() &&
+           y <= self.y() + TILE_HEIGHT as i32 {
             true
         } else {
             false

@@ -25,9 +25,29 @@ pub struct Tiles {
 }
 
 impl Tiles {
-    pub fn new(raw_positions: &[(u8, u8, u8); 144], renderer: &Renderer) -> Self {
-        let positions = Positions::new(raw_positions);
-        let models = Models::new(&positions);
+    pub fn new(raw_positions: &mut [(u8, u8, u8); 144], renderer: &Renderer) -> Self {
+        // NOTE: sorting currently needed for rendering
+        // NOTE: also needed now for searching for a tile based on coords
+        //       maybe this should just be left in?
+        raw_positions.sort_by(|&(x1, y1, z1), &(x2, y2, z2)| {
+            use std::cmp::Ordering::*;
+            if z1 < z2 {
+                Less
+            } else if z1 > z2 {
+                Greater
+            } else if x1 > x2 {
+                Less
+            } else if x1 < x2 {
+                Greater
+            } else if y1 < y2 {
+                Less
+            } else {
+                Greater
+            }
+        });
+
+        let positions = Positions::new(&raw_positions);
+        let models = Models::new(&raw_positions);
         let textures = create_textures(renderer);
 
         let mut tiles = Tiles {
@@ -51,10 +71,18 @@ impl Tiles {
         let side_tex = self.textures.get(&TextureId::Side).unwrap();
         let bottom_tex = self.textures.get(&TextureId::Bottom).unwrap();
 
-        for ((tile_type, model), position) in self.types.iter().zip(self.models.iter()).zip(self.positions.iter()) {
-            if !position.is_occupied() { continue; }
+        let iter = self.types
+            .iter()
+            .zip(self.models.iter())
+            .zip(self.positions.iter());
 
-            let face_tex = self.textures.get(&TextureId::Face(*tile_type, model.is_highlighted())).unwrap();
+        for ((tile_type, model), position) in iter {
+            if !position.is_occupied() {
+                continue;
+            }
+
+            let face_tex =
+                self.textures.get(&TextureId::Face(*tile_type, model.is_highlighted())).unwrap();
 
             renderer.copy(side_tex, None, Some(model.side()));
             renderer.copy(bottom_tex, None, Some(model.bottom()));
@@ -86,7 +114,7 @@ impl Tiles {
         self.positions
             .iter()
             .enumerate()
-            .filter(|&(_, position)| position.is_playable() )
+            .filter(|&(_, position)| position.is_playable())
             .map(|(index, _)| TileId(index))
             .collect()
     }
@@ -106,7 +134,7 @@ impl Tiles {
         loop {
             match self.try_shuffle_types() {
                 Ok(_) => break,
-                Err(_) => self.positions.reset()
+                Err(_) => self.positions.reset(),
             }
         }
     }
@@ -115,10 +143,10 @@ impl Tiles {
         let mut available_types = get_tile_types();
         let mut used_positions = 0;
         let mut types = [None; 144];
-        
+
         loop {
             let mut positions = self.placable_positions();
-            
+
             if positions.len() < 2 {
                 return Err(());
             }
@@ -175,9 +203,9 @@ fn create_textures(renderer: &Renderer) -> HashMap<TextureId, Texture> {
     }
 
     let side_texture = renderer.load_texture(Path::new("img/TileSide.png"))
-                                .expect(ERROR_MESSAGE);
+        .expect(ERROR_MESSAGE);
     let bottom_texture = renderer.load_texture(Path::new("img/TileBottom.png"))
-                                    .expect(ERROR_MESSAGE);
+        .expect(ERROR_MESSAGE);
 
     textures.insert(Side, side_texture);
     textures.insert(Bottom, bottom_texture);

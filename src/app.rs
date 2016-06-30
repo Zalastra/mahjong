@@ -25,10 +25,10 @@ impl<'a> App<'a> {
         let video_subsystem = sdl_context.video().expect("error creating video subsystem");
         sdl2_image::init(INIT_PNG).expect("error initializing sdl2 image");
         let mut window = video_subsystem.window("Mahjong", 1080, 750)
-                                        .maximized()
-                                        .resizable()
-                                        .build()
-                                        .expect("error creating window");
+            .maximized()
+            .resizable()
+            .build()
+            .expect("error creating window");
 
         window.set_minimum_size(730, 500).unwrap();
 
