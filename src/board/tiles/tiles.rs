@@ -46,8 +46,8 @@ impl Tiles {
             }
         });
 
-        let positions = Positions::new(&raw_positions);
-        let models = Models::new(&raw_positions);
+        let positions = Positions::new(raw_positions);
+        let models = Models::new(raw_positions);
         let textures = create_textures(renderer);
 
         let mut tiles = Tiles {
@@ -57,14 +57,12 @@ impl Tiles {
             textures: textures,
         };
         tiles.shuffle_types();
-        tiles.positions.update_states();
         tiles
     }
 
     pub fn reset(&mut self) {
         self.positions.reset();
         self.shuffle_types();
-        self.positions.update_states();
     }
 
     pub fn render(&self, renderer: &mut Renderer) {

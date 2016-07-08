@@ -43,15 +43,6 @@ impl Positions {
         }
         set_random_start_positions(&self.0);
     }
-
-    // NOTE: we need to update the state after the shuffling the types
-    //       because our board building algorithm is currently flawed
-    //
-    pub fn update_states(&self) {
-        for position in self.0.iter() {
-            position.update_state();
-        }
-    }
 }
 
 impl Deref for Positions {
@@ -259,6 +250,7 @@ impl BoardPosition {
                 .filter(|n| n.position().is_occupied())
                 .any(|n| n.direction == direction)
         };
+        
         let all_occupied = |direction| {
             self.neighbours
                 .borrow()
@@ -267,11 +259,34 @@ impl BoardPosition {
                 .all(|n| n.position().is_occupied())
         };
 
+        let all_empty = |direction| {
+            fn check_neighbours(neighbours: &[Neighbour], direction: Direction) -> bool {
+                for n in neighbours.iter().filter(|n| n.direction == direction) {
+                    let empty = traverse(&*n.position(), direction);
+                    if !empty {
+                        return false;
+                    }
+                }
+                true
+            }
+
+            fn traverse(pos: &BoardPosition, direction: Direction) -> bool {
+                if pos.state.get() != Empty {
+                    return false;
+                }
+                check_neighbours(&*pos.neighbours.borrow(), direction)
+            }
+
+            check_neighbours(&*self.neighbours.borrow(), direction)
+        };
+
         match self.state.get() {
-            // TODO: selecting placables needs to work better than this flawed algo
             Empty => {
                 if all_occupied(Down) {
-                    if all_occupied(Left) || all_occupied(Right) {
+                    if all_empty(Left) && all_empty(Right) {
+                        self.state.set(Placable);
+                    } else if (any_occupied(Left) && all_occupied(Left)) || 
+                        (any_occupied(Right) && all_occupied(Right)) {
                         self.state.set(Placable);
                     }
                 }
@@ -326,7 +341,7 @@ impl Neighbour {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum Direction {
     Up,
     Down,
