@@ -66,7 +66,7 @@ impl TileType {
                     _ => false,
                 }
             }
-            _ => return *self == *other,
+            _ => *self == *other,
         }
     }
 }

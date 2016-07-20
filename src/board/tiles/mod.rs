@@ -13,7 +13,7 @@ use self::positions::Positions;
 use self::models::Models;
 use self::types::TileType;
 
-//use self::TextureId::*;
+// use self::TextureId::*;
 
 static ERROR_MESSAGE: &'static str = "error loading texture";
 
@@ -84,8 +84,7 @@ impl Tiles {
                 continue;
             }
 
-            let face_tex =
-                self.textures.get(&Face(*tile_type, model.is_highlighted())).unwrap();
+            let face_tex = self.textures.get(&Face(*tile_type, model.is_highlighted())).unwrap();
 
             renderer.copy(side_tex, None, Some(model.side()));
             renderer.copy(bottom_tex, None, Some(model.bottom()));
@@ -124,10 +123,8 @@ impl Tiles {
 
     pub fn find_playable_tile_by_coord(&self, x: i32, y: i32) -> Option<TileId> {
         for (index, model) in self.models.iter().enumerate().rev() {
-            if self.positions[index].is_playable() {
-                if model.hit_test(x, y) {
-                    return Some(TileId(index));
-                }
+            if self.positions[index].is_playable() && model.hit_test(x, y) {
+                return Some(TileId(index));
             }
         }
         None

@@ -121,13 +121,13 @@ impl Board {
         let mut sets = Vec::new();
         let mut used_tiles = Vec::new();
 
-        for tile in self.tiles.playable_tiles().iter() {
+        for tile in &self.tiles.playable_tiles() {
             if used_tiles.contains(tile) {
                 continue;
             }
 
             let mut set = HintSet::new(*tile);
-            for tile2 in self.tiles.playable_tiles().iter() {
+            for tile2 in &self.tiles.playable_tiles() {
                 if !self.tiles.are_matching(tile, tile2) || tile == tile2 {
                     continue;
                 }
@@ -189,7 +189,7 @@ impl HintSet {
     }
 
     fn add(&mut self, tile: TileId) {
-        for opt_tile in self.0.iter_mut() {
+        for opt_tile in &mut self.0 {
             if *opt_tile == None {
                 *opt_tile = Some(tile);
                 break;
@@ -198,7 +198,7 @@ impl HintSet {
     }
 
     fn highlight(&self, tiles: &mut Tiles) {
-        for opt_tile in self.0.iter() {
+        for opt_tile in &self.0 {
             if let Some(tile) = *opt_tile {
                 tiles.highlight_tile(tile);
             }
@@ -206,7 +206,7 @@ impl HintSet {
     }
 
     fn dehighlight(&self, tiles: &mut Tiles) {
-        for opt_tile in self.0.iter() {
+        for opt_tile in &self.0 {
             if let Some(tile) = *opt_tile {
                 tiles.dehighlight_tile(tile)
             }

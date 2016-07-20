@@ -92,12 +92,8 @@ impl TileModel {
     // TODO: better name needed?
     #[inline]
     pub fn hit_test(&self, x: i32, y: i32) -> bool {
-        if x >= self.x() && x <= self.x() + TILE_WIDTH as i32 && y >= self.y() &&
-           y <= self.y() + TILE_HEIGHT as i32 {
-            true
-        } else {
-            false
-        }
+        x >= self.x() && x <= self.x() + TILE_WIDTH as i32 && y >= self.y() &&
+        y <= self.y() + TILE_HEIGHT as i32
     }
 
     #[inline]

@@ -19,8 +19,8 @@ impl Positions {
             .collect::<Vec<_>>();
 
         // NOTE: Optimization possible by not checking every combination twice
-        for position1 in positions.iter() {
-            for position2 in positions.iter() {
+        for position1 in &positions {
+            for position2 in &positions {
                 if let Some(direction) = neighbouring(position1, position2) {
                     let neighbour = Neighbour {
                         direction: direction,
@@ -38,7 +38,7 @@ impl Positions {
     // NOTE: perhaps start positions could be cached so they wouldnt have to be calculated
     //       every time and could be conditionally reset.
     pub fn reset(&self) {
-        for position in self.0.iter() {
+        for position in &self.0 {
             position.state.set(Empty);
         }
         set_random_start_positions(&self.0);
@@ -90,7 +90,7 @@ fn set_random_start_positions(positions: &[Rc<BoardPosition>]) {
                            ground_position_graphs.last_mut().unwrap());
     }
 
-    for graph in ground_position_graphs.iter() {
+    for graph in &ground_position_graphs {
         let rows: HashSet<u8> = graph.iter()
             .map(|position| position.y())
             .fold(RefCell::new(HashSet::new()), |rows, y| {
@@ -250,7 +250,7 @@ impl BoardPosition {
                 .filter(|n| n.position().is_occupied())
                 .any(|n| n.direction == direction)
         };
-        
+
         let all_occupied = |direction| {
             self.neighbours
                 .borrow()
@@ -282,19 +282,15 @@ impl BoardPosition {
 
         match self.state.get() {
             Empty => {
-                if all_occupied(Down) {
-                    if all_empty(Left) && all_empty(Right) {
-                        self.state.set(Placable);
-                    } else if (any_occupied(Left) && all_occupied(Left)) || 
-                        (any_occupied(Right) && all_occupied(Right)) {
-                        self.state.set(Placable);
-                    }
+                if all_occupied(Down) &&
+                   ((all_empty(Left) && all_empty(Right)) ||
+                    ((any_occupied(Left) && all_occupied(Left)) ||
+                     (any_occupied(Right) && all_occupied(Right)))) {
+                    self.state.set(Placable);
                 }
             }
             Blocked | Unblocked => {
-                if any_occupied(Up) {
-                    self.state.set(Blocked)
-                } else if any_occupied(Left) && any_occupied(Right) {
+                if any_occupied(Up) || (any_occupied(Left) && any_occupied(Right)) {
                     self.state.set(Blocked)
                 } else {
                     self.state.set(Unblocked)
