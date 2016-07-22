@@ -34,15 +34,7 @@ impl Tiles {
         //       maybe this should just be left in?
         raw_positions.sort_by(|&(x1, y1, z1), &(x2, y2, z2)| {
             use std::cmp::Ordering::*;
-            if z1 < z2 {
-                Less
-            } else if z1 > z2 {
-                Greater
-            } else if x1 > x2 {
-                Less
-            } else if x1 < x2 {
-                Greater
-            } else if y1 < y2 {
+            if (z1, x2, y1) < (z2, x1, y2) {
                 Less
             } else {
                 Greater
