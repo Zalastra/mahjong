@@ -133,7 +133,6 @@ fn set_random_start_positions(positions: &[Rc<BoardPosition>]) {
     }
 }
 
-#[inline]
 fn neighbouring(position1: &BoardPosition, position2: &BoardPosition) -> Option<Direction> {
     if position1.z() == position2.z() {
         if position1.y() <= position2.y() + 1 && position1.y() + 1 >= position2.y() {
@@ -184,22 +183,18 @@ impl BoardPosition {
         }
     }
 
-    #[inline]
     pub fn x(&self) -> u8 {
         self.raw.x
     }
 
-    #[inline]
     pub fn y(&self) -> u8 {
         self.raw.y
     }
 
-    #[inline]
     pub fn z(&self) -> u8 {
         self.raw.z
     }
 
-    #[inline]
     pub fn is_occupied(&self) -> bool {
         match self.state.get() {
             Blocked | Unblocked => true,
@@ -207,7 +202,6 @@ impl BoardPosition {
         }
     }
 
-    #[inline]
     pub fn is_playable(&self) -> bool {
         match self.state.get() {
             Unblocked => true,
@@ -215,7 +209,6 @@ impl BoardPosition {
         }
     }
 
-    #[inline]
     pub fn is_placable(&self) -> bool {
         match self.state.get() {
             Placable => true,
@@ -223,19 +216,16 @@ impl BoardPosition {
         }
     }
 
-    #[inline]
     pub fn empty(&self) {
         self.state.set(Empty);
         self.update_neighbours()
     }
 
-    #[inline]
     pub fn occupy(&self) {
         self.state.set(Unblocked);
         self.update_neighbours()
     }
 
-    #[inline]
     fn update_neighbours(&self) {
         for neighbour in self.neighbours.borrow().iter() {
             neighbour.position().update_state();

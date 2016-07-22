@@ -42,7 +42,6 @@ iterable_enum!{
 }
 
 impl TileType {
-    #[inline]
     pub fn max_allowed(&self) -> u8 {
         match *self {
             FlowerPlum | FlowerOrchid | FlowerChrysanthemum | FlowerBamboo | SeasonSpring |
@@ -51,7 +50,6 @@ impl TileType {
         }
     }
 
-    #[inline]
     pub fn matches(&self, other: &TileType) -> bool {
         match *self {
             FlowerPlum | FlowerOrchid | FlowerChrysanthemum | FlowerBamboo => {

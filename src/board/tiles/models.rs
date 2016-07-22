@@ -46,7 +46,6 @@ pub struct TileModel {
 }
 
 impl TileModel {
-    #[inline]
     fn new(x: i32, y: i32) -> Self {
         TileModel {
             face_rect: Rect::new(x, y, TILE_WIDTH, TILE_HEIGHT),
@@ -59,49 +58,40 @@ impl TileModel {
         }
     }
 
-    #[inline]
     pub fn face(&self) -> Rect {
         self.face_rect
     }
 
-    #[inline]
     pub fn side(&self) -> Rect {
         self.side_rect
     }
 
-    #[inline]
     pub fn bottom(&self) -> Rect {
         self.bottom_rect
     }
 
-    #[inline]
     pub fn is_highlighted(&self) -> bool {
         self.highlighted
     }
 
-    #[inline]
     pub fn highlight(&mut self) {
         self.highlighted = true;
     }
 
-    #[inline]
     pub fn dehighlight(&mut self) {
         self.highlighted = false;
     }
 
     // TODO: better name needed?
-    #[inline]
     pub fn hit_test(&self, x: i32, y: i32) -> bool {
         x >= self.x() && x <= self.x() + TILE_WIDTH as i32 && y >= self.y() &&
         y <= self.y() + TILE_HEIGHT as i32
     }
 
-    #[inline]
     fn x(&self) -> i32 {
         self.face_rect.x()
     }
 
-    #[inline]
     fn y(&self) -> i32 {
         self.face_rect.y()
     }
