@@ -91,44 +91,51 @@ fn set_random_start_positions(positions: &[Rc<BoardPosition>]) {
     }
 
     for graph in &ground_position_graphs {
-        let rows: HashSet<u8> = graph.iter()
-            .map(|position| position.y())
-            .fold(RefCell::new(HashSet::new()), |rows, y| {
-                rows.borrow_mut().insert(y);
-                rows
+        fn neighbours(position: Rc<BoardPosition>, direction: Direction) -> Vec<Rc<BoardPosition>> {
+            position
+            .neighbours
+            .borrow()
+            .iter()
+            .filter(|neighbour| {
+                neighbour.direction == direction
             })
-            .into_inner();
-
-        match rows.len() {
-            0 => unreachable!(),
-            1 => {
-                let random_index = thread_rng().gen_range(0, graph.len());
-                graph[random_index].state.set(Placable);
+            .map(|neighbour| {
+                neighbour.position().clone()
+            })
+            .collect::<Vec<_>>()
+        }
+        
+        fn set_neighbours_recursively_unplacable(position: Rc<BoardPosition>, direction: Direction) {
+            let mut n = neighbours(position.clone(), direction);
+            while n.len() > 0 {
+                let mut new_neighbours = Vec::new();
+                for position in &n {
+                    position.state.set(Unplacable);
+                    new_neighbours.append(&mut neighbours(position.clone(), direction));
+                }
+                n = new_neighbours;
             }
-            3 => {
-                let add_random_position_from_row = |row| {
-                    let count = graph.iter()
-                        .filter(|&position| position.y() == row)
-                        .count();
+        }
+        
+        let mut available_positions = graph.clone();
 
-                    let random_index = thread_rng().gen_range(0, count);
-                    let (_, position) = graph.iter()
-                        .filter(|&position| position.y() == row)
-                        .enumerate()
-                        .filter(|&(index, _)| index == random_index)
-                        .next()
-                        .unwrap();
+        while available_positions.len() > 0 {
+            let random_index = thread_rng().gen_range(0, available_positions.len());
+            let position = available_positions[random_index].clone();
+            position.state.set(Placable);
 
-                    position.state.set(Placable);
-                };
+            set_neighbours_recursively_unplacable(position.clone(), Left);
+            set_neighbours_recursively_unplacable(position.clone(), Right);
 
-                let row = *rows.iter().min().unwrap();
-                add_random_position_from_row(row);
-
-                let row = *rows.iter().max().unwrap();
-                add_random_position_from_row(row);
-            }
-            _ => unimplemented!(),
+            available_positions =
+                available_positions.iter()
+                .filter(|position| {
+                    position.state.get() == Empty
+                })
+                .map(|position| {
+                    position.clone()
+                })
+                .collect();
         }
     }
 }
@@ -271,7 +278,7 @@ impl BoardPosition {
         };
 
         match self.state.get() {
-            Empty => {
+            Empty | Unplacable => {
                 if all_occupied(Down) &&
                    ((all_empty(Left) && all_empty(Right)) ||
                     ((any_occupied(Left) && all_occupied(Left)) ||
@@ -310,6 +317,7 @@ impl Hash for BoardPosition {
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum State {
     Empty,
+    Unplacable,
     Placable,
     Blocked,
     Unblocked,
