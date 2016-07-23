@@ -15,18 +15,18 @@ pub struct Positions(Vec<Rc<BoardPosition>>);
 impl Positions {
     pub fn new(raw_positions: &[(u8, u8, u8); 144]) -> Self {
         let positions = raw_positions.iter()
-            .map(|&(x, y, z)| Rc::new(BoardPosition::new(x, y, z)))
+            .map(|&(x, y, z)| BoardPosition::new(x, y, z))
             .collect::<Vec<_>>();
 
         // NOTE: Optimization possible by not checking every combination twice
         for position1 in &positions {
             for position2 in &positions {
-                if let Some(direction) = neighbouring(position1, position2) {
+                if let Some(direction) = neighbouring(position1.raw, position2.raw) {
                     let neighbour = Neighbour {
                         direction: direction,
                         position: Rc::downgrade(position2),
                     };
-                    position1.neighbours.borrow_mut().push(neighbour)
+                    position1.neighbours.borrow_mut().push(neighbour);
                 }
             }
         }
@@ -63,89 +63,56 @@ fn set_random_start_positions(positions: &[Rc<BoardPosition>]) {
     let mut ground_position_graphs: Vec<Vec<Rc<BoardPosition>>> = Vec::new();
     let mut visited_positions: HashSet<Rc<BoardPosition>> = HashSet::default();
 
-    fn traverse_positions(position: Rc<BoardPosition>,
-                          visited: &mut HashSet<Rc<BoardPosition>>,
-                          graph: &mut Vec<Rc<BoardPosition>>) {
-        if visited.contains(&position) {
-            return;
-        }
-
-        visited.insert(position.clone());
-        for neighbour in position.neighbours.borrow().iter() {
-            traverse_positions(neighbour.position().clone(), visited, graph)
-        }
-        if position.z() == 0 {
-            graph.push(position);
-        }
-    }
-
     for position in positions.iter() {
         if visited_positions.contains(position) {
             continue;
         }
 
-        ground_position_graphs.push(Vec::new());
-        traverse_positions(position.clone(),
-                           &mut visited_positions,
-                           ground_position_graphs.last_mut().unwrap());
+        let mut graph = Vec::new();
+        let mut neighbours: Vec<Neighbour> = position.neighbours.borrow().clone();
+
+        while !neighbours.is_empty() {
+            let position = neighbours.pop().unwrap().position();
+            if !visited_positions.contains(&position) {
+                if position.raw.z == 0 {
+                    graph.push(position.clone());
+                }
+                neighbours.append(&mut position.neighbours.borrow_mut().clone());
+                visited_positions.insert(position.clone());
+            }
+        }
+
+        ground_position_graphs.push(graph);
     }
 
     for graph in &ground_position_graphs {
-        fn neighbours(position: Rc<BoardPosition>, direction: Direction) -> Vec<Rc<BoardPosition>> {
-            position
-            .neighbours
-            .borrow()
-            .iter()
-            .filter(|neighbour| {
-                neighbour.direction == direction
-            })
-            .map(|neighbour| {
-                neighbour.position().clone()
-            })
-            .collect::<Vec<_>>()
-        }
-        
-        fn set_neighbours_recursively_unplacable(position: Rc<BoardPosition>, direction: Direction) {
-            let mut n = neighbours(position.clone(), direction);
-            while n.len() > 0 {
-                let mut new_neighbours = Vec::new();
-                for position in &n {
-                    position.state.set(Unplacable);
-                    new_neighbours.append(&mut neighbours(position.clone(), direction));
-                }
-                n = new_neighbours;
-            }
-        }
-        
         let mut available_positions = graph.clone();
 
-        while available_positions.len() > 0 {
+        while !available_positions.is_empty() {
             let random_index = thread_rng().gen_range(0, available_positions.len());
             let position = available_positions[random_index].clone();
             position.state.set(Placable);
 
-            set_neighbours_recursively_unplacable(position.clone(), Left);
-            set_neighbours_recursively_unplacable(position.clone(), Right);
+            position.set_recursively_neighbours_unplaceble(Left);
+            position.set_recursively_neighbours_unplaceble(Right);
 
-            available_positions =
-                available_positions.iter()
-                .filter(|position| {
-                    position.state.get() == Empty
-                })
-                .map(|position| {
-                    position.clone()
-                })
-                .collect();
+            let mut new_available_positions = Vec::new();
+            for position in &available_positions {
+                if position.state.get() == Empty {
+                    new_available_positions.push(position.clone());
+                }
+            }
+            available_positions = new_available_positions;
         }
     }
 }
 
-fn neighbouring(position1: &BoardPosition, position2: &BoardPosition) -> Option<Direction> {
-    if position1.z() == position2.z() {
-        if position1.y() <= position2.y() + 1 && position1.y() + 1 >= position2.y() {
-            if position1.x() == position2.x() + 2 {
+fn neighbouring(position1: RawPosition, position2: RawPosition) -> Option<Direction> {
+    if position1.z == position2.z {
+        if position1.y <= position2.y + 1 && position1.y + 1 >= position2.y {
+            if position1.x == position2.x + 2 {
                 Some(Left)
-            } else if position1.x() + 2 == position2.x() {
+            } else if position1.x + 2 == position2.x {
                 Some(Right)
             } else {
                 None
@@ -153,11 +120,11 @@ fn neighbouring(position1: &BoardPosition, position2: &BoardPosition) -> Option<
         } else {
             None
         }
-    } else if position1.x() <= position2.x() + 1 && position1.x() + 1 >= position2.x() &&
-       position1.y() <= position2.y() + 1 && position1.y() + 1 >= position2.y() {
-        if position1.z() + 1 == position2.z() {
+    } else if position1.x <= position2.x + 1 && position1.x + 1 >= position2.x &&
+       position1.y <= position2.y + 1 && position1.y + 1 >= position2.y {
+        if position1.z + 1 == position2.z {
             Some(Up)
-        } else if position1.z() == position2.z() + 1 {
+        } else if position1.z == position2.z + 1 {
             Some(Down)
         } else {
             None
@@ -165,13 +132,6 @@ fn neighbouring(position1: &BoardPosition, position2: &BoardPosition) -> Option<
     } else {
         None
     }
-}
-
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
-struct RawPosition {
-    x: u8,
-    y: u8,
-    z: u8,
 }
 
 #[derive(Debug)]
@@ -182,24 +142,12 @@ pub struct BoardPosition {
 }
 
 impl BoardPosition {
-    fn new(x: u8, y: u8, z: u8) -> Self {
-        BoardPosition {
+    fn new(x: u8, y: u8, z: u8) -> Rc<BoardPosition> {
+        Rc::new(BoardPosition {
             raw: RawPosition { x: x, y: y, z: z },
             state: Cell::new(Empty),
             neighbours: RefCell::new(Vec::new()),
-        }
-    }
-
-    pub fn x(&self) -> u8 {
-        self.raw.x
-    }
-
-    pub fn y(&self) -> u8 {
-        self.raw.y
-    }
-
-    pub fn z(&self) -> u8 {
-        self.raw.z
+        })
     }
 
     pub fn is_occupied(&self) -> bool {
@@ -233,6 +181,18 @@ impl BoardPosition {
         self.update_neighbours()
     }
 
+    fn set_recursively_neighbours_unplaceble(&self, direction: Direction) {
+        let mut neighbours = self.neighbours.borrow().clone();
+        while !neighbours.is_empty() {
+            let neighbour = neighbours.pop().unwrap();
+            if neighbour.direction == direction {
+                let position = neighbour.position();
+                position.state.set(Unplacable);
+                neighbours.append(&mut position.neighbours.borrow().clone());
+            }
+        }
+    }
+
     fn update_neighbours(&self) {
         for neighbour in self.neighbours.borrow().iter() {
             neighbour.position().update_state();
@@ -257,24 +217,19 @@ impl BoardPosition {
         };
 
         let all_empty = |direction| {
-            fn check_neighbours(neighbours: &[Neighbour], direction: Direction) -> bool {
-                for n in neighbours.iter().filter(|n| n.direction == direction) {
-                    let empty = traverse(&*n.position(), direction);
-                    if !empty {
+            let mut neighbours = self.neighbours.borrow().clone();
+
+            while !neighbours.is_empty() {
+                let neighbour = neighbours.pop().unwrap();
+                if neighbour.direction == direction {
+                    let position = neighbour.position();
+                    if position.state.get() != Empty {
                         return false;
                     }
+                    neighbours.append(&mut position.neighbours.borrow().clone());
                 }
-                true
             }
-
-            fn traverse(pos: &BoardPosition, direction: Direction) -> bool {
-                if pos.state.get() != Empty {
-                    return false;
-                }
-                check_neighbours(&*pos.neighbours.borrow(), direction)
-            }
-
-            check_neighbours(&*self.neighbours.borrow(), direction)
+            true
         };
 
         match self.state.get() {
@@ -283,6 +238,7 @@ impl BoardPosition {
                    ((all_empty(Left) && all_empty(Right)) ||
                     ((any_occupied(Left) && all_occupied(Left)) ||
                      (any_occupied(Right) && all_occupied(Right)))) {
+
                     self.state.set(Placable);
                 }
             }
@@ -314,17 +270,15 @@ impl Hash for BoardPosition {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum State {
-    Empty,
-    Unplacable,
-    Placable,
-    Blocked,
-    Unblocked,
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+struct RawPosition {
+    x: u8,
+    y: u8,
+    z: u8,
 }
 
-#[derive(Debug)]
-pub struct Neighbour {
+#[derive(Clone, Debug)]
+struct Neighbour {
     direction: Direction,
     position: Weak<BoardPosition>,
 }
@@ -333,6 +287,15 @@ impl Neighbour {
     pub fn position(&self) -> Rc<BoardPosition> {
         self.position.upgrade().unwrap()
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum State {
+    Empty,
+    Unplacable,
+    Placable,
+    Blocked,
+    Unblocked,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

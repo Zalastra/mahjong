@@ -13,8 +13,6 @@ use self::positions::Positions;
 use self::models::Models;
 use self::types::TileType;
 
-// use self::TextureId::*;
-
 static ERROR_MESSAGE: &'static str = "error loading texture";
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -51,6 +49,7 @@ impl Tiles {
             models: models,
             textures: textures,
         };
+
         tiles.shuffle_types();
         tiles
     }
