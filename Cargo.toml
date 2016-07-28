@@ -4,6 +4,6 @@ version = "0.1.0"
 authors = ["Maarten Bonsema <maarten.bonsema@gmail.com>"]
 
 [dependencies]
-rand = "0.3.12"
-sdl2 = "0.21.0"
-sdl2_image = "0.21.0"
+rand = "0.3"
+sdl2 = "0.21"
+sdl2_image = "0.21"
