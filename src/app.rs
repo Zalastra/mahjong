@@ -12,9 +12,12 @@ use sdl2::messagebox::*;
 use sdl2_image::{self, INIT_PNG};
 
 use board::Board;
+use ui::UiContext;
+use ui::Action::*;
 
 pub struct App<'a> {
     board: Board,
+    ui: UiContext,
     renderer: Renderer<'a>,
     event_pump: EventPump,
 }
@@ -37,8 +40,11 @@ impl<'a> App<'a> {
 
         renderer.set_logical_size(730, 500).unwrap();
 
+        let ui = UiContext::new(&renderer);
+
         App {
             board: Board::new(&renderer),
+            ui: ui,
             renderer: renderer,
             event_pump: event_pump,
         }
@@ -53,6 +59,12 @@ impl<'a> App<'a> {
 
         while running {
             for event in self.event_pump.poll_iter() {
+                match self.ui.handle_event(&event) {
+                    Some(Start) => self.board.reset(),
+                    Some(Undo) => self.board.undo(),
+                    Some(Hint) => self.board.highlight_possible_matches(),
+                    _ => {}
+                }
                 match event {
                     Event::Quit { .. } |
                     Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
@@ -85,6 +97,7 @@ impl<'a> App<'a> {
             self.renderer.set_draw_color(Color::RGB(0, 0, 0));
             self.renderer.clear();
             self.board.render(&mut self.renderer);
+            self.ui.render(&mut self.renderer);
             self.renderer.present();
 
             if game_over {

@@ -35,9 +35,9 @@ impl Board {
     }
 
     pub fn try_select_tile(&mut self, mouse_x: i32, mouse_y: i32) -> Result<(), GameOver> {
+        self.stop_hints();
+        
         if let Some(tile1) = self.tiles.find_playable_tile_by_coord(mouse_x, mouse_y) {
-            self.stop_hints();
-
             match self.selected_tile {
                 Some(tile2) => {
                     // deselect tile
