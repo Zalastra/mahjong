@@ -80,7 +80,7 @@ impl Button {
     }
 
     fn render(&self, renderer: &mut Renderer) {
-        renderer.copy(&self.texture, None, Some(self.placement));
+        let _ = renderer.copy(&self.texture, None, Some(self.placement));
     }
 
     fn mouse_down(&mut self, x: i32, y: i32) {

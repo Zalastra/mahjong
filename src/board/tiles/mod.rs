@@ -80,9 +80,9 @@ impl Tiles {
 
             let face_tex = self.textures.get(&Face(*tile_type, model.is_highlighted())).unwrap();
 
-            renderer.copy(side_tex, None, Some(model.side()));
-            renderer.copy(bottom_tex, None, Some(model.bottom()));
-            renderer.copy(face_tex, None, Some(model.face()));
+            let _ = renderer.copy(side_tex, None, Some(model.side()));
+            let _ = renderer.copy(bottom_tex, None, Some(model.bottom()));
+            let _ = renderer.copy(face_tex, None, Some(model.face()));
         }
     }
 
