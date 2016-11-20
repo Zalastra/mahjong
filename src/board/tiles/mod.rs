@@ -39,7 +39,9 @@ impl Tiles {
             }
         });
 
-        let positions = Positions::new(raw_positions);
+        let mut rng = thread_rng();
+
+        let positions = Positions::new(raw_positions, &mut rng);
         let models = Models::new(raw_positions);
         let textures = create_textures(renderer);
 
@@ -50,13 +52,14 @@ impl Tiles {
             textures: textures,
         };
 
-        tiles.shuffle_types();
+        tiles.shuffle_types(&mut rng);
         tiles
     }
 
     pub fn reset(&mut self) {
-        self.positions.reset();
-        self.shuffle_types();
+        let mut rng = thread_rng();
+        self.positions.reset(&mut rng);
+        self.shuffle_types(&mut rng);
     }
 
     pub fn render(&self, renderer: &mut Renderer) {
@@ -121,16 +124,16 @@ impl Tiles {
         None
     }
 
-    fn shuffle_types(&mut self) {
+    fn shuffle_types<R: Rng>(&mut self, rng: &mut R) {
         loop {
-            match self.try_shuffle_types() {
+            match self.try_shuffle_types(rng) {
                 Ok(_) => break,
-                Err(_) => self.positions.reset(),
+                Err(_) => self.positions.reset(rng),
             }
         }
     }
 
-    fn try_shuffle_types(&mut self) -> Result<(), ()> {
+    fn try_shuffle_types<R: Rng>(&mut self, rng: &mut R) -> Result<(), ()> {
         let mut available_types = get_tile_types();
         let mut used_positions = 0;
         let mut types = [None; 144];
@@ -142,14 +145,14 @@ impl Tiles {
                 return Err(());
             }
 
-            let random_index = thread_rng().gen_range(0, available_types.len() / 2) * 2;
+            let random_index = rng.gen_range(0, available_types.len() / 2) * 2;
             let tile_type1 = available_types.swap_remove(random_index + 1);
             let tile_type2 = available_types.swap_remove(random_index);
 
-            let random_index = thread_rng().gen_range(0, positions.len());
+            let random_index = rng.gen_range(0, positions.len());
             let tile_id1 = positions.swap_remove(random_index);
 
-            let random_index = thread_rng().gen_range(0, positions.len());
+            let random_index = rng.gen_range(0, positions.len());
             let tile_id2 = positions.swap_remove(random_index);
 
             self.positions[tile_id1.0].occupy();

@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::{Rc, Weak};
 use std::ops::{Deref, DerefMut};
 
-use rand::{thread_rng, Rng};
+use rand::Rng;
 
 use self::Direction::*;
 use self::State::*;
@@ -13,7 +13,7 @@ use self::State::*;
 pub struct Positions(Vec<Rc<BoardPosition>>);
 
 impl Positions {
-    pub fn new(raw_positions: &[(u8, u8, u8); 144]) -> Self {
+    pub fn new<R: Rng>(raw_positions: &[(u8, u8, u8); 144], rng: &mut R) -> Self {
         let positions = raw_positions.iter()
             .map(|&(x, y, z)| BoardPosition::new(x, y, z))
             .collect::<Vec<_>>();
@@ -31,17 +31,17 @@ impl Positions {
             }
         }
 
-        set_random_start_positions(&positions);
+        set_random_start_positions(&positions, rng);
         Positions(positions)
     }
 
     // NOTE: perhaps start positions could be cached so they wouldnt have to be calculated
     //       every time and could be conditionally reset.
-    pub fn reset(&self) {
+    pub fn reset<R: Rng>(&self, rng: &mut R) {
         for position in &self.0 {
             position.state.set(Empty);
         }
-        set_random_start_positions(&self.0);
+        set_random_start_positions(&self.0, rng);
     }
 }
 
@@ -59,7 +59,7 @@ impl DerefMut for Positions {
     }
 }
 
-fn set_random_start_positions(positions: &[Rc<BoardPosition>]) {
+fn set_random_start_positions<R: Rng>(positions: &[Rc<BoardPosition>], rng: &mut R) {
     let mut ground_position_graphs: Vec<Vec<Rc<BoardPosition>>> = Vec::new();
     let mut visited_positions: HashSet<Rc<BoardPosition>> = HashSet::default();
 
@@ -89,7 +89,7 @@ fn set_random_start_positions(positions: &[Rc<BoardPosition>]) {
         let mut available_positions = graph.clone();
 
         while !available_positions.is_empty() {
-            let random_index = thread_rng().gen_range(0, available_positions.len());
+            let random_index = rng.gen_range(0, available_positions.len());
             let position = available_positions[random_index].clone();
             position.state.set(Placable);
 
