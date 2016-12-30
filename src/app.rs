@@ -6,10 +6,9 @@ use sdl2::pixels::Color;
 use sdl2::keyboard::Keycode;
 use sdl2::render::Renderer;
 use sdl2::event::Event;
-use sdl2::mouse::Mouse;
 use sdl2::messagebox::*;
-
-use sdl2_image::{self, INIT_PNG};
+use sdl2::mouse::MouseButton;
+use sdl2::image::INIT_PNG;
 
 use board::Board;
 use ui::UiContext;
@@ -26,7 +25,7 @@ impl<'a> App<'a> {
     pub fn new() -> App<'a> {
         let sdl_context = sdl2::init().expect("error creating sdl context");
         let video_subsystem = sdl_context.video().expect("error creating video subsystem");
-        sdl2_image::init(INIT_PNG).expect("error initializing sdl2 image");
+        sdl2::image::init(INIT_PNG).expect("error initializing sdl2 image");
         let mut window = video_subsystem.window("Mahjong", 1080, 750)
             .maximized()
             .resizable()
@@ -59,22 +58,26 @@ impl<'a> App<'a> {
 
         while running {
             for event in self.event_pump.poll_iter() {
+                let mut done = true;
                 match self.ui.handle_event(&event) {
                     Some(Start) => self.board.reset(),
                     Some(Undo) => self.board.undo(),
                     Some(Hint) => self.board.highlight_possible_matches(),
-                    _ => {}
+                    _ => done = false,
+                }
+                if done {
+                    continue;
                 }
                 match event {
                     Event::Quit { .. } |
                     Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                         running = false;
                     }
-                    Event::MouseButtonDown { mouse_btn: Mouse::Left, x, y, .. } => {
+                    Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, .. } => {
                         mouse_x = x;
                         mouse_y = y;
                     }
-                    Event::MouseButtonUp { mouse_btn: Mouse::Left, .. } => {
+                    Event::MouseButtonUp { mouse_btn: MouseButton::Left, .. } => {
                         if self.board.try_select_tile(mouse_x, mouse_y).is_err() {
                             game_over = true;
                         }

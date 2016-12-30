@@ -1,6 +1,8 @@
+#![feature(windows_subsystem)]
+#![windows_subsystem = "windows"]
+
 extern crate rand;
 extern crate sdl2;
-extern crate sdl2_image;
 
 mod app;
 mod board;

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use rand::{thread_rng, Rng};
 use sdl2::render::{Renderer, Texture};
-use sdl2_image::LoadTexture;
+use sdl2::image::LoadTexture;
 
 mod positions;
 mod models;

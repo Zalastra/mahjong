@@ -2,10 +2,10 @@ use std::path::Path;
 
 use sdl2::event::Event;
 use sdl2::event::Event::{MouseButtonDown, MouseButtonUp};
-use sdl2::mouse::Mouse::*;
+use sdl2::mouse::MouseButton;
 use sdl2::rect::Rect;
 use sdl2::render::{Renderer, Texture};
-use sdl2_image::LoadTexture;
+use sdl2::image::LoadTexture;
 
 use self::Action::*;
 
@@ -30,12 +30,12 @@ impl UiContext {
 
     pub fn handle_event(&mut self, event: &Event) -> Option<Action> {
         match *event {
-            MouseButtonDown { mouse_btn: Left, x, y, .. } => {
+            MouseButtonDown { mouse_btn: MouseButton::Left, x, y, .. } => {
                 for button in &mut self.buttons {
                     button.mouse_down(x, y);
                 }
             }
-            MouseButtonUp { mouse_btn: Left, x, y, .. } => {
+            MouseButtonUp { mouse_btn: MouseButton::Left, x, y, .. } => {
                 for button in &mut self.buttons {
                     if let Some(action) = button.mouse_up(x, y) {
                         return Some(action);
