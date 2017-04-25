@@ -14,10 +14,10 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn new(renderer: &Renderer) -> Board {
+    pub fn new() -> Board {
         let mut positions = get_raw_positios();
 
-        let tiles = Tiles::new(&mut positions, renderer);
+        let tiles = Tiles::new(&mut positions);
 
         Board {
             tiles: tiles,
@@ -47,7 +47,7 @@ impl Board {
                     }
 
                     // test tile match
-                    if !self.tiles.are_matching(&tile1, &tile2) {
+                    if !self.tiles.are_matching(tile1, tile2) {
                         return Ok(());
                     }
 
@@ -113,7 +113,7 @@ impl Board {
         }
     }
 
-    pub fn render(&self, renderer: &mut Renderer) {
+    pub fn render(&mut self, renderer: &mut Renderer) {
         self.tiles.render(renderer);
     }
 
@@ -121,23 +121,23 @@ impl Board {
         let mut sets = Vec::new();
         let mut used_tiles = Vec::new();
 
-        for tile in &self.tiles.playable_tiles() {
-            if used_tiles.contains(tile) {
+        for tile in self.tiles.playable_tiles() {
+            if used_tiles.contains(&tile) {
                 continue;
             }
 
-            let mut set = HintSet::new(*tile);
-            for tile2 in &self.tiles.playable_tiles() {
+            let mut set = HintSet::new(tile);
+            for tile2 in self.tiles.playable_tiles() {
                 if !self.tiles.are_matching(tile, tile2) || tile == tile2 {
                     continue;
                 }
 
-                used_tiles.push(*tile2);
-                set.add(*tile2);
+                used_tiles.push(tile2);
+                set.add(tile2);
             }
 
             if set.0[1] != None {
-                used_tiles.push(*tile);
+                used_tiles.push(tile);
                 sets.push(set);
             }
         }

@@ -68,3 +68,9 @@ impl TileType {
         }
     }
 }
+
+impl Default for TileType {
+    fn default() -> TileType {
+        BallOne
+    }
+}

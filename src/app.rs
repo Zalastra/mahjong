@@ -1,10 +1,9 @@
 use std::thread;
 use std::time::Duration;
 
-use sdl2::{self, EventPump};
+use sdl2;
 use sdl2::pixels::Color;
 use sdl2::keyboard::Keycode;
-use sdl2::render::Renderer;
 use sdl2::event::Event;
 use sdl2::messagebox::*;
 use sdl2::mouse::MouseButton;
@@ -13,43 +12,32 @@ use sdl2::image::INIT_PNG;
 use board::Board;
 use ui::UiContext;
 use ui::Action::*;
+use sdl::get_systems;
 
-pub struct App<'a> {
+pub struct App {
     board: Board,
     ui: UiContext,
-    renderer: Renderer<'a>,
-    event_pump: EventPump,
 }
 
-impl<'a> App<'a> {
-    pub fn new() -> App<'a> {
-        let sdl_context = sdl2::init().expect("error creating sdl context");
-        let video_subsystem = sdl_context.video().expect("error creating video subsystem");
+impl App {
+    pub fn new() -> App {
+        let _ = get_systems(); // Force SDL init
         sdl2::image::init(INIT_PNG).expect("error initializing sdl2 image");
-        let mut window = video_subsystem.window("Mahjong", 1080, 750)
-            .maximized()
-            .resizable()
-            .build()
-            .expect("error creating window");
 
-        window.set_minimum_size(730, 500).unwrap();
-
-        let mut renderer = window.renderer().build().expect("error creating renderer");
-        let event_pump = sdl_context.event_pump().expect("error creating event pump");
-
-        renderer.set_logical_size(730, 500).unwrap();
-
-        let ui = UiContext::new(&renderer);
+        let board = Board::new();
+        let ui = UiContext::new();
 
         App {
-            board: Board::new(&renderer),
+            board: board,
             ui: ui,
-            renderer: renderer,
-            event_pump: event_pump,
         }
     }
 
     pub fn run(&mut self) {
+        let sdl_systems = get_systems();
+        let mut renderer = sdl_systems.0.borrow_mut();
+        let mut event_pump = sdl_systems.1.borrow_mut();
+
         let mut running = true;
         let mut game_over = false;
 
@@ -57,7 +45,7 @@ impl<'a> App<'a> {
         let mut mouse_y = 0;
 
         while running {
-            for event in self.event_pump.poll_iter() {
+            for event in event_pump.poll_iter() {
                 let mut done = true;
                 match self.ui.handle_event(&event) {
                     Some(Start) => self.board.reset(),
@@ -97,11 +85,11 @@ impl<'a> App<'a> {
 
             self.board.update();
 
-            self.renderer.set_draw_color(Color::RGB(0, 0, 0));
-            self.renderer.clear();
-            self.board.render(&mut self.renderer);
-            self.ui.render(&mut self.renderer);
-            self.renderer.present();
+            renderer.set_draw_color(Color::RGB(0, 0, 0));
+            renderer.clear();
+            self.board.render(&mut renderer);
+            self.ui.render(&mut renderer);
+            renderer.present();
 
             if game_over {
                 show_simple_message_box(MessageBoxFlag::all(),

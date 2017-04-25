@@ -7,6 +7,7 @@ use sdl2::rect::Rect;
 use sdl2::render::{Renderer, Texture};
 use sdl2::image::LoadTexture;
 
+use sdl;
 use self::Action::*;
 
 pub struct UiContext {
@@ -14,7 +15,10 @@ pub struct UiContext {
 }
 
 impl UiContext {
-    pub fn new(renderer: &Renderer) -> UiContext {
+    pub fn new() -> UiContext {
+        let sdl_systems = sdl::get_systems();
+        let renderer = sdl_systems.0.borrow();
+        
         let start_button_texture = renderer.load_texture(Path::new("img/start.png")).unwrap();
         let undo_button_texture = renderer.load_texture(Path::new("img/undo.png")).unwrap();
         let hint_button_texture = renderer.load_texture(Path::new("img/hint.png")).unwrap();

@@ -10,3 +10,10 @@ rand = "0.3"
 version = "0.27"
 default-features = false
 features = ["image"]
+
+[features]
+default = []
+
+# render during initial board creation
+# waits for a mouseclick inbetween placing tiles
+debug = []
