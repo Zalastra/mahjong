@@ -3,7 +3,7 @@ name = "mahjong"
 version = "0.1.0"
 dependencies = [
  "rand 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
- "sdl2 0.27.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sdl2 0.29.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "sdl2"
-version = "0.27.2"
+version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -91,5 +91,5 @@ dependencies = [
 "checksum num-iter 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)" = "287a1c9969a847055e1122ec0ea7a5c5d6f72aad97934e131c83d5c08ab4e45c"
 "checksum num-traits 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)" = "a16a42856a256b39c6d3484f097f6713e14feacd9bfb02290917904fae46c81c"
 "checksum rand 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)" = "022e0636ec2519ddae48154b028864bdce4eaf7d35226ab8e65c611be97b189d"
-"checksum sdl2 0.27.2 (registry+https://github.com/rust-lang/crates.io-index)" = "55d39a8921d9cab08e229dccb574940c99b5819f872ff13335f7e087ffbbdf53"
+"checksum sdl2 0.29.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4c366cfa1f22d001774214ce2fb13f369af760b016bc79cc62d7f5ae15c00fea"
 "checksum sdl2-sys 0.27.2 (registry+https://github.com/rust-lang/crates.io-index)" = "37cfe343db4cd2159cab098096fff52e92d513c2a5b1ee06abbfd5db5323a64d"
