@@ -584,7 +584,6 @@ impl<'a> TileShuffler<'a> {
                 }
                 tiles = new_tiles;
             },
-            (_, 0) | (_, 1) => unreachable!(),
             _ => (),
         }
 
