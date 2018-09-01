@@ -1,51 +1,34 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use sdl2::{self, EventPump};
-use sdl2::render::Renderer;
-use sdl2::event::Event;
-use sdl2::mouse::MouseButton;
+use sdl2::render::{TextureCreator, WindowCanvas};
+use sdl2::video::WindowContext;
 
-pub fn get_systems<'a>() -> Rc<(RefCell<Renderer<'static>>, RefCell<EventPump>)> {
-    thread_local!(static SDL_SYSTEMS: Rc<(RefCell<Renderer<'static>>, RefCell<EventPump>)> = {
-        let sdl_context = sdl2::init().expect("error creating sdl context");
+use sdl2::image::INIT_PNG;
 
-        let video_subsystem = sdl_context.video().expect("error creating video subsystem");
-        let mut window = video_subsystem.window("Mahjong", 1080, 750)
-            .maximized()
-            .resizable()
-            .build()
-            .expect("error creating window");
-
-        window.set_minimum_size(730, 500).unwrap();
-
-        let mut renderer = window.renderer().build().expect("error creating renderer");
-        renderer.set_logical_size(730, 500).unwrap();
-
-        let event_pump = sdl_context.event_pump().expect("error creating event pump");
-
-        Rc::new((RefCell::new(renderer), RefCell::new(event_pump)))
-    });
-
-    SDL_SYSTEMS.with(|sdl_systems| sdl_systems.clone())
+pub struct SdlContext {
+    pub canvas: WindowCanvas,
+    pub texture_creator: TextureCreator<WindowContext>,
+    pub event_pump: EventPump,
 }
 
-#[allow(dead_code)]
-pub fn wait_for_click() {
-    let sdl_systems = get_systems();
-    if let Ok(mut event_pump) = sdl_systems.1.try_borrow_mut() {
-        wait_for_click_ep(&mut *event_pump);
-    }; // semicolon required in last if let of scope to not break the borrow checker
-}
+pub fn init_sdl() -> SdlContext {
+    let sdl_context = sdl2::init().expect("error creating sdl context");
+    sdl2::image::init(INIT_PNG).expect("error initializing sdl2 image");
 
-#[allow(dead_code)]
-pub fn wait_for_click_ep(event_pump: &mut EventPump) {
-    'a: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::MouseButtonUp { mouse_btn: MouseButton::Left, .. } => break 'a,
-                _ => (),
-            }
-        }
-    }
+    let video_subsystem = sdl_context.video().expect("error creating video subsystem");
+    let mut window = video_subsystem.window("Mahjong", 1080, 750)
+        .maximized()
+        .resizable()
+        .build()
+        .expect("error creating window");
+
+    window.set_minimum_size(730, 500).unwrap();
+
+    let mut canvas = window.into_canvas().present_vsync().build().expect("error creating window canvas");
+    canvas.set_logical_size(730, 500).unwrap();
+
+    let texture_creator = canvas.texture_creator();
+
+    let event_pump = sdl_context.event_pump().expect("error creating event pump");
+
+    SdlContext { canvas, texture_creator, event_pump }
 }

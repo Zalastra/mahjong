@@ -4,24 +4,21 @@ use sdl2::event::Event;
 use sdl2::event::Event::{MouseButtonDown, MouseButtonUp};
 use sdl2::mouse::MouseButton;
 use sdl2::rect::Rect;
-use sdl2::render::{Renderer, Texture};
+use sdl2::render::{WindowCanvas, Texture, TextureCreator};
+use sdl2::video::WindowContext;
 use sdl2::image::LoadTexture;
 
-use sdl;
 use self::Action::*;
 
-pub struct UiContext {
-    buttons: [Button; 3],
+pub struct UiContext<'s> {
+    buttons: [Button<'s>; 3],
 }
 
-impl UiContext {
-    pub fn new() -> UiContext {
-        let sdl_systems = sdl::get_systems();
-        let renderer = sdl_systems.0.borrow();
-        
-        let start_button_texture = renderer.load_texture(Path::new("img/start.png")).unwrap();
-        let undo_button_texture = renderer.load_texture(Path::new("img/undo.png")).unwrap();
-        let hint_button_texture = renderer.load_texture(Path::new("img/hint.png")).unwrap();
+impl<'s> UiContext<'s> {
+    pub fn new(texture_creator: &'s TextureCreator<WindowContext>) -> UiContext<'s> {
+        let start_button_texture = texture_creator.load_texture(Path::new("img/start.png")).unwrap();
+        let undo_button_texture = texture_creator.load_texture(Path::new("img/undo.png")).unwrap();
+        let hint_button_texture = texture_creator.load_texture(Path::new("img/hint.png")).unwrap();
 
         let start_button = Button::new(10, 10, 120, 50, Start, start_button_texture);
         let undo_button = Button::new(10, 70, 120, 50, Undo, undo_button_texture);
@@ -52,9 +49,9 @@ impl UiContext {
     }
     
 
-    pub fn render(&self, renderer: &mut Renderer) {
+    pub fn render(&self, canvas: &mut WindowCanvas) {
         for button in &self.buttons {
-            button.render(renderer);
+            button.render(canvas);
         }
     }
 }
@@ -66,14 +63,14 @@ pub enum Action {
     Hint,
 }
 
-struct Button {
+struct Button<'s> {
     placement: Rect,
-    texture: Texture,
+    texture: Texture<'s>,
     action: Action,
     pressed: bool,
 }
 
-impl Button {
+impl<'s> Button<'s> {
     fn new(x: i32, y: i32, width: u32, height: u32, action: Action, texture: Texture) -> Button {
         Button {
             placement: Rect::new(x / 2, y / 2, width / 2, height / 2),
@@ -83,8 +80,8 @@ impl Button {
         }
     }
 
-    fn render(&self, renderer: &mut Renderer) {
-        let _ = renderer.copy(&self.texture, None, Some(self.placement));
+    fn render(&self, canvas: &mut WindowCanvas) {
+        let _ = canvas.copy(&self.texture, None, Some(self.placement));
     }
 
     fn mouse_down(&mut self, x: i32, y: i32) {

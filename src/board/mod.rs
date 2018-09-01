@@ -2,22 +2,23 @@ mod tiles;
 
 use std::time::Instant;
 
-use sdl2::render::Renderer;
+use sdl2::render::{TextureCreator, WindowCanvas};
+use sdl2::video::WindowContext;
 
 use self::tiles::{TileId, Tiles};
 
-pub struct Board {
-    tiles: Tiles,
+pub struct Board<'s> {
+    tiles: Tiles<'s>,
     played: Vec<(TileId, TileId)>,
     selected_tile: Option<TileId>,
     hints: Option<Hints>,
 }
 
-impl Board {
-    pub fn new() -> Board {
+impl<'s> Board<'s> {
+    pub fn new(texture_creator: &'s TextureCreator<WindowContext>) -> Board<'s> {
         let mut positions = get_raw_positios();
 
-        let tiles = Tiles::new(&mut positions);
+        let tiles = Tiles::new(&mut positions, texture_creator);
 
         Board {
             tiles: tiles,
@@ -113,8 +114,8 @@ impl Board {
         }
     }
 
-    pub fn render(&mut self, renderer: &mut Renderer) {
-        self.tiles.render(renderer);
+    pub fn render(&mut self, canvas: &mut WindowCanvas) {
+        self.tiles.render(canvas);
     }
 
     fn get_available_matches(&self) -> Result<Vec<HintSet>, NoMatch> {

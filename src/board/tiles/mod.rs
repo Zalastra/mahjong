@@ -2,10 +2,9 @@ use std::collections::{HashMap};
 use std::path::{Path, PathBuf};
 use std::cmp::Ordering::*;
 
-use sdl2::render::{Renderer, Texture};
+use sdl2::render::{WindowCanvas, Texture, TextureCreator};
 use sdl2::image::LoadTexture;
-
-use sdl;
+use sdl2::video::WindowContext;
 
 mod models;
 mod types;
@@ -22,17 +21,17 @@ use self::PlayState::*;
 
 static ERROR_MESSAGE: &'static str = "error loading texture";
 
-pub struct Tiles {
+pub struct Tiles<'s> {
     positions: Vec<Position>,
     neighbours: Vec<Vec<Neighbour>>,
     types: Vec<TileType>,
     states: Vec<PlayState>,
     models: Models,
-    textures: HashMap<TextureId, Texture>,
+    textures: HashMap<TextureId, Texture<'s>>,
 }
 
-impl Tiles {
-    pub fn new(raw_positions: &mut [(u8, u8, u8); 144]) -> Self {
+impl<'s> Tiles<'s> {
+    pub fn new(raw_positions: &mut [(u8, u8, u8); 144], texture_creator: &'s TextureCreator<WindowContext>) -> Self {
         // NOTE: sorting currently needed for rendering
         // NOTE: also needed now for searching for a tile based on coords
         //       maybe this should just be left in?
@@ -56,7 +55,7 @@ impl Tiles {
         //let types = TileShuffler::new(&positions, &neighbours).shuffle();
         let states = vec![Default::default(); 144];
         let models = Models::new(raw_positions);
-        let textures = create_textures();
+        let textures = create_textures(texture_creator);
 
         let mut tiles = Tiles {
             positions: positions,
@@ -85,7 +84,7 @@ impl Tiles {
         }
     }
 
-    pub fn render(&mut self, renderer: &mut Renderer) {
+    pub fn render(&mut self, canvas: &mut WindowCanvas) {
         use self::TextureId::*;
 
         let side_tex = self.textures.get(&Side).unwrap();
@@ -103,9 +102,9 @@ impl Tiles {
 
             let face_tex = self.textures.get(&Face(*tile_type, model.is_highlighted())).unwrap();
 
-            let _ = renderer.copy(side_tex, None, Some(model.side()));
-            let _ = renderer.copy(bottom_tex, None, Some(model.bottom()));
-            let _ = renderer.copy(face_tex, None, Some(model.face()));
+            let _ = canvas.copy(side_tex, None, Some(model.side()));
+            let _ = canvas.copy(bottom_tex, None, Some(model.bottom()));
+            let _ = canvas.copy(face_tex, None, Some(model.face()));
         }
     }
 
@@ -207,11 +206,9 @@ impl Default for PlayState {
     }
 }
 
-fn create_textures() -> HashMap<TextureId, Texture> {
+fn create_textures<'s>(texture_creator: &'s TextureCreator<WindowContext>) -> HashMap<TextureId, Texture<'s>> {
     use self::TextureId::*;
 
-    let sdl_systems = sdl::get_systems();
-    let renderer = sdl_systems.0.borrow();
     let mut textures = HashMap::new();
 
     for tile_type in TileType::iter() {
@@ -219,17 +216,17 @@ fn create_textures() -> HashMap<TextureId, Texture> {
         texture_path_buf.push(tile_type.filename_texture());
         let texture_path = texture_path_buf.as_path();
 
-        let mut texture = renderer.load_texture(texture_path).expect(ERROR_MESSAGE);
+        let mut texture = texture_creator.load_texture(texture_path).expect(ERROR_MESSAGE);
         texture.set_color_mod(255, 127, 127);
         textures.insert(Face(*tile_type, true), texture);
 
-        let texture = renderer.load_texture(texture_path).expect(ERROR_MESSAGE);
+        let texture = texture_creator.load_texture(texture_path).expect(ERROR_MESSAGE);
         textures.insert(Face(*tile_type, false), texture);
     }
 
-    let side_texture = renderer.load_texture(Path::new("img/TileSide.png"))
+    let side_texture = texture_creator.load_texture(Path::new("img/TileSide.png"))
         .expect(ERROR_MESSAGE);
-    let bottom_texture = renderer.load_texture(Path::new("img/TileBottom.png"))
+    let bottom_texture = texture_creator.load_texture(Path::new("img/TileBottom.png"))
         .expect(ERROR_MESSAGE);
 
     textures.insert(Side, side_texture);
