@@ -1,6 +1,8 @@
-use std::collections::{HashMap};
-use std::path::{Path, PathBuf};
 use std::cmp::Ordering::*;
+use std::collections::{HashMap};
+use std::iter::{Enumerate, FilterMap};
+use std::path::{Path, PathBuf};
+use std::slice::Iter;
 
 use sdl2::render::{WindowCanvas, Texture, TextureCreator};
 use sdl2::image::LoadTexture;
@@ -130,14 +132,16 @@ impl<'s> Tiles<'s> {
         self.types[tile1.0].matches(&self.types[tile2.0])
     }
 
-    // TODO return impl Iterator
-    pub fn playable_tiles(&self) -> Vec<TileId> {
-        self.states
-            .iter()
-            .enumerate()
-            .filter(|&(_, state)| *state == Playable)
-            .map(|(index, _)| TileId(index))
-            .collect()
+    pub fn playable_tiles(&self) -> PlayableTiles {
+        PlayableTiles { 
+            iter: self.states.iter().enumerate().filter_map(|(index, &state)| {
+                if state == Playable {
+                    Some(TileId(index))
+                } else {
+                    None
+                }
+            })
+        }
     }
 
     pub fn find_playable_tile_by_coord(&self, x: i32, y: i32) -> Option<TileId> {
@@ -173,6 +177,19 @@ impl<'s> Tiles<'s> {
             .iter()
             .filter(|neighbour| neighbour.direction == direction)
             .any(|neighbour| self.states[neighbour.id] != Played)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PlayableTiles<'a> {
+    iter: FilterMap<Enumerate<Iter<'a, PlayState>>, for<'r> fn((usize, &'r PlayState)) ->Option<TileId>>
+}
+
+impl<'a> Iterator for PlayableTiles<'a> {
+    type Item = TileId;
+
+    fn next(&mut self) -> Option<TileId> {
+        self.iter.next()
     }
 }
 
