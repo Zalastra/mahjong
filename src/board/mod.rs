@@ -21,7 +21,7 @@ impl<'s> Board<'s> {
         let tiles = Tiles::new(&mut positions, texture_creator);
 
         Board {
-            tiles: tiles,
+            tiles,
             played: Vec::new(),
             selected_tile: None,
             hints: None,
@@ -87,7 +87,7 @@ impl<'s> Board<'s> {
             sets[0].highlight(&mut self.tiles);
 
             self.hints = Some(Hints {
-                sets: sets,
+                sets,
                 start_time: Instant::now(),
                 current_index: 0,
             });

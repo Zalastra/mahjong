@@ -74,8 +74,8 @@ impl<'s> Button<'s> {
     fn new(x: i32, y: i32, width: u32, height: u32, action: Action, texture: Texture) -> Button {
         Button {
             placement: Rect::new(x / 2, y / 2, width / 2, height / 2),
-            texture: texture,
-            action: action,
+            texture,
+            action,
             pressed: false,
         }
     }

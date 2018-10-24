@@ -60,12 +60,12 @@ impl<'s> Tiles<'s> {
         let textures = create_textures(texture_creator);
 
         let mut tiles = Tiles {
-            positions: positions,
-            neighbours: neighbours,
-            types: types,
-            states: states,
-            models: models,
-            textures: textures,
+            positions,
+            neighbours,
+            types,
+            states,
+            models,
+            textures,
         };
 
         for tile in 0..144 {
@@ -89,8 +89,8 @@ impl<'s> Tiles<'s> {
     pub fn render(&mut self, canvas: &mut WindowCanvas) {
         use self::TextureId::*;
 
-        let side_tex = self.textures.get(&Side).unwrap();
-        let bottom_tex = self.textures.get(&Bottom).unwrap();
+        let side_tex = &self.textures[&Side];
+        let bottom_tex = &self.textures[&Bottom];
 
         let iter = self.types
             .iter()
@@ -102,7 +102,7 @@ impl<'s> Tiles<'s> {
                 continue;
             }
 
-            let face_tex = self.textures.get(&Face(*tile_type, model.is_highlighted())).unwrap();
+            let face_tex = &self.textures[&Face(*tile_type, model.is_highlighted())];
 
             let _ = canvas.copy(side_tex, None, Some(model.side()));
             let _ = canvas.copy(bottom_tex, None, Some(model.bottom()));
@@ -129,7 +129,7 @@ impl<'s> Tiles<'s> {
     }
 
     pub fn are_matching(&self, tile1: TileId, tile2: TileId) -> bool {
-        self.types[tile1.0].matches(&self.types[tile2.0])
+        self.types[tile1.0].matches(self.types[tile2.0])
     }
 
     pub fn playable_tiles(&self) -> PlayableTiles {

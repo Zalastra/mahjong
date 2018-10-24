@@ -6,6 +6,7 @@ static TILE_WIDTH: u32 = 46;
 static TILE_HEIGHT: u32 = 57; // TODO: change texture height to even number
 static TILE_SIDE_WIDTH: u32 = 5;
 static TILE_BOTTOM_HEIGHT: u32 = 5;
+static TILE_SIDE_HEIGHT: u32 = TILE_HEIGHT + TILE_BOTTOM_HEIGHT;
 
 pub struct Models(Vec<TileModel>);
 
@@ -13,8 +14,8 @@ impl Models {
     pub fn new(positions: &[(u8, u8, u8); 144]) -> Models {
         let models = positions.iter()
             .map(|&(x, y, z)| {
-                let model_x = x as i32 * 23 + z as i32 * TILE_SIDE_WIDTH as i32 + 20;
-                let model_y = y as i32 * 29 - z as i32 * TILE_BOTTOM_HEIGHT as i32 + 15;
+                let model_x = i32::from(x) * 23 + i32::from(z) * TILE_SIDE_WIDTH as i32 + 20;
+                let model_y = i32::from(y) * 29 - i32::from(z) * TILE_BOTTOM_HEIGHT as i32 + 15;
                 TileModel::new(model_x, model_y)
             })
             .collect::<Vec<_>>();
@@ -52,7 +53,7 @@ impl TileModel {
             side_rect: Rect::new(x - TILE_SIDE_WIDTH as i32,
                                  y,
                                  TILE_SIDE_WIDTH,
-                                 TILE_HEIGHT + TILE_BOTTOM_HEIGHT),
+                                 TILE_SIDE_HEIGHT),
             bottom_rect: Rect::new(x, y + TILE_HEIGHT as i32, TILE_WIDTH, TILE_BOTTOM_HEIGHT),
             highlighted: false,
         }

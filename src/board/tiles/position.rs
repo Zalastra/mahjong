@@ -8,7 +8,7 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn neighbours(&self, other: Position) -> Option<Direction> {
+    pub fn neighbours(self, other: Position) -> Option<Direction> {
         if self.is_up_neighbour(other) { Some(Up) }
         else if self.is_down_neighbour(other) { Some(Down) }
         else if self.is_left_neighbour(other) { Some(Left) }
@@ -16,28 +16,28 @@ impl Position {
         else { None }
     }
 
-    fn is_up_neighbour(&self, other: Position) -> bool {
+    fn is_up_neighbour(self, other: Position) -> bool {
         self.z + 1 == other.z && self.is_potential_vertical_neighbour(other)
     }
 
-    fn is_down_neighbour(&self, other: Position) -> bool {
+    fn is_down_neighbour(self, other: Position) -> bool {
         self.z == other.z + 1 && self.is_potential_vertical_neighbour(other)
     }
 
-    fn is_potential_vertical_neighbour(&self, other: Position) -> bool {
+    fn is_potential_vertical_neighbour(self, other: Position) -> bool {
         self.x <= other.x + 1 && self.x + 1 >= other.x &&
         self.y <= other.y + 1 && self.y + 1 >= other.y
     }
 
-    fn is_left_neighbour(&self, other: Position) -> bool {
+    fn is_left_neighbour(self, other: Position) -> bool {
         self.x == other.x + 2 && self.is_potential_horizontal_neighbour(other)
     }
 
-    fn is_right_neighbour(&self, other: Position) -> bool {
+    fn is_right_neighbour(self, other: Position) -> bool {
         self.x + 2 == other.x && self.is_potential_horizontal_neighbour(other)
     }
 
-    fn is_potential_horizontal_neighbour(&self, other: Position) -> bool {
+    fn is_potential_horizontal_neighbour(self, other: Position) -> bool {
         self.z == other.z &&
         self.y <= other.y + 1 && self.y + 1 >= other.y
     }
