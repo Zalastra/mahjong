@@ -5,8 +5,8 @@ extern crate sdl2;
 
 mod app;
 mod board;
-mod ui;
 mod sdl;
+mod ui;
 
 use app::run_game;
 use sdl::init_sdl;

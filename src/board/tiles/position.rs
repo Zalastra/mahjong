@@ -25,8 +25,8 @@ impl Position {
     }
 
     fn is_potential_vertical_neighbour(self, other: Position) -> bool {
-        self.x <= other.x + 1 && self.x + 1 >= other.x &&
-        self.y <= other.y + 1 && self.y + 1 >= other.y
+        self.x <= other.x + 1 && self.x + 1 >= other.x
+            && self.y <= other.y + 1 && self.y + 1 >= other.y
     }
 
     fn is_left_neighbour(self, other: Position) -> bool {
@@ -38,8 +38,7 @@ impl Position {
     }
 
     fn is_potential_horizontal_neighbour(self, other: Position) -> bool {
-        self.z == other.z &&
-        self.y <= other.y + 1 && self.y + 1 >= other.y
+        self.z == other.z && self.y <= other.y + 1 && self.y + 1 >= other.y
     }
 }
 

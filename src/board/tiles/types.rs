@@ -44,26 +44,22 @@ iterable_enum!{
 impl TileType {
     pub fn max_allowed(self) -> u8 {
         match self {
-            FlowerPlum | FlowerOrchid | FlowerChrysanthemum | FlowerBamboo | SeasonSpring |
-            SeasonSummer | SeasonAutumn | SeasonWinter => 1,
+            FlowerPlum | FlowerOrchid | FlowerChrysanthemum | FlowerBamboo
+            | SeasonSpring | SeasonSummer | SeasonAutumn | SeasonWinter => 1,
             _ => 4,
         }
     }
 
     pub fn matches(self, other: TileType) -> bool {
         match self {
-            FlowerPlum | FlowerOrchid | FlowerChrysanthemum | FlowerBamboo => {
-                match other {
-                    FlowerPlum | FlowerOrchid | FlowerChrysanthemum | FlowerBamboo => true,
-                    _ => false,
-                }
-            }
-            SeasonSpring | SeasonSummer | SeasonAutumn | SeasonWinter => {
-                match other {
-                    SeasonSpring | SeasonSummer | SeasonAutumn | SeasonWinter => true,
-                    _ => false,
-                }
-            }
+            FlowerPlum | FlowerOrchid | FlowerChrysanthemum | FlowerBamboo => match other {
+                FlowerPlum | FlowerOrchid | FlowerChrysanthemum | FlowerBamboo => true,
+                _ => false,
+            },
+            SeasonSpring | SeasonSummer | SeasonAutumn | SeasonWinter => match other {
+                SeasonSpring | SeasonSummer | SeasonAutumn | SeasonWinter => true,
+                _ => false,
+            },
             _ => self == other,
         }
     }

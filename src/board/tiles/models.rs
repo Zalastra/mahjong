@@ -12,13 +12,13 @@ pub struct Models(Vec<TileModel>);
 
 impl Models {
     pub fn new(positions: &[(u8, u8, u8); 144]) -> Models {
-        let models = positions.iter()
+        let models = positions
+            .iter()
             .map(|&(x, y, z)| {
                 let model_x = i32::from(x) * 23 + i32::from(z) * TILE_SIDE_WIDTH as i32 + 20;
                 let model_y = i32::from(y) * 29 - i32::from(z) * TILE_BOTTOM_HEIGHT as i32 + 15;
                 TileModel::new(model_x, model_y)
-            })
-            .collect::<Vec<_>>();
+            }).collect::<Vec<_>>();
 
         Models(models)
     }
@@ -50,10 +50,12 @@ impl TileModel {
     fn new(x: i32, y: i32) -> Self {
         TileModel {
             face_rect: Rect::new(x, y, TILE_WIDTH, TILE_HEIGHT),
-            side_rect: Rect::new(x - TILE_SIDE_WIDTH as i32,
-                                 y,
-                                 TILE_SIDE_WIDTH,
-                                 TILE_SIDE_HEIGHT),
+            side_rect: Rect::new(
+                x - TILE_SIDE_WIDTH as i32,
+                y,
+                TILE_SIDE_WIDTH,
+                TILE_SIDE_HEIGHT,
+            ),
             bottom_rect: Rect::new(x, y + TILE_HEIGHT as i32, TILE_WIDTH, TILE_BOTTOM_HEIGHT),
             highlighted: false,
         }
@@ -85,8 +87,10 @@ impl TileModel {
 
     // TODO: better name needed?
     pub fn hit_test(&self, x: i32, y: i32) -> bool {
-        x >= self.x() && x <= self.x() + TILE_WIDTH as i32 && y >= self.y() &&
-        y <= self.y() + TILE_HEIGHT as i32
+        x >= self.x()
+            && x <= self.x() + TILE_WIDTH as i32
+            && y >= self.y()
+            && y <= self.y() + TILE_HEIGHT as i32
     }
 
     fn x(&self) -> i32 {

@@ -1,16 +1,16 @@
 use std::thread;
 use std::time::Duration;
 
-use sdl2::pixels::Color;
-use sdl2::keyboard::Keycode;
 use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 use sdl2::messagebox::*;
 use sdl2::mouse::MouseButton;
+use sdl2::pixels::Color;
 
 use board::Board;
-use ui::UiContext;
-use ui::Action::*;
 use sdl::SdlContext;
+use ui::Action::*;
+use ui::UiContext;
 
 pub fn run_game(sdl: &mut SdlContext) {
     let mut board = Board::new(&sdl.texture_creator);
@@ -70,11 +70,12 @@ pub fn run_game(sdl: &mut SdlContext) {
         sdl.canvas.present();
 
         if game_over {
-            show_simple_message_box(MessageBoxFlag::all(),
+            show_simple_message_box(
+                MessageBoxFlag::all(),
                                     "Game Over",
                                     "You have no possible moves left",
-                                    None)
-                .ok();
+                None,
+            ).ok();
             game_over = false;
         }
 

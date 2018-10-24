@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use rand::{thread_rng, Rng};
 
-use super::position::{Position, Neighbour, Direction};
+use super::position::{Direction, Neighbour, Position};
 use super::types::TileType;
 use super::Direction::*;
 
@@ -13,8 +13,10 @@ use self::CreationState::*;
 ///
 /// Panics if the provided slices are not of equal length
 pub fn shuffle(types: &mut [TileType], positions: &[Position], neighbours: &[Vec<Neighbour>]) {
-    assert!(types.len() == positions.len() && types.len() == neighbours.len(),
-        "Given argument slices are not of equal length");
+    assert!(
+        types.len() == positions.len() && types.len() == neighbours.len(),
+        "Given argument slices are not of equal length"
+    );
     let shuffler = TileShuffler::new(positions, neighbours);
     shuffler.shuffle(types);
 }
@@ -50,14 +52,18 @@ struct TileShuffler<'a> {
 
 impl<'a> TileShuffler<'a> {
     fn new(positions: &'a [Position], neighbours: &'a [Vec<Neighbour>]) -> Self {
-        Self { positions, neighbours, states: vec![Default::default(); 144] }
+        Self {
+            positions,
+            neighbours,
+            states: vec![Default::default(); 144],
+        }
     }
 
     fn shuffle(mut self, types: &mut [TileType]) {
         //let mut types = vec![Default::default(); 144];
         loop {
             self.set_random_starting_creation_tiles();
-            
+
             if self.try_shuffle(types).is_ok() {
                 break;
             } else {
@@ -75,16 +81,18 @@ impl<'a> TileShuffler<'a> {
 
                 self.states[tile] = Placable;
 
-                group = group.into_iter().filter(|&tile| {
-                    self.states[tile] == Unplaced && self.no_placable_neighbour_in_row(tile)
-                }).collect()
+                group = group
+                    .into_iter()
+                    .filter(|&tile| {
+                        self.states[tile] == Unplaced && self.no_placable_neighbour_in_row(tile)
+                    }).collect()
             }
         }
     }
 
     fn no_placable_neighbour_in_row(&self, tile: usize) -> bool {
-        self.no_placable_neighbour_in_row_direction(tile, Left) &&
-        self.no_placable_neighbour_in_row_direction(tile, Right)
+        self.no_placable_neighbour_in_row_direction(tile, Left)
+            && self.no_placable_neighbour_in_row_direction(tile, Right)
     }
 
     fn no_placable_neighbour_in_row_direction(&self, tile: usize, direction: Direction) -> bool {
@@ -105,13 +113,17 @@ impl<'a> TileShuffler<'a> {
         let mut visited = HashSet::new();
 
         for tile in 0..144 {
-            if visited.contains(&tile) { continue }
+            if visited.contains(&tile) {
+                continue;
+            }
 
             let mut group = Vec::new();
             let mut neighbours = self.neighbours[tile].clone();
 
             while let Some(neighbour) = neighbours.pop() {
-                if visited.contains(&neighbour.id) { continue }
+                if visited.contains(&neighbour.id) {
+                    continue;
+                }
                 visited.insert(neighbour.id);
 
                 if self.positions[neighbour.id].z == 0 {
@@ -146,7 +158,7 @@ impl<'a> TileShuffler<'a> {
                     being placed.
 
             Code below in placable_tiles_adjusted is a slight improvement reducing the number of failed boards
-            */ 
+            */
 
             let mut tiles = self.placable_tiles_adjusted(tiles_placed);
 
@@ -204,11 +216,11 @@ impl<'a> TileShuffler<'a> {
                     let same_y = self.positions[tile].y == self.positions[neighbour.id].y;
                     let all_placed_in_source_direction =
                         self.all_neighbours_in_direction_placed(neighbour.id, direction.rev());
-                    
+
                     if all_down && (same_y || all_placed_in_source_direction) {
                         self.states[neighbour.id] = Placable;
                     }
-                },
+                }
                 (Unplaced, Up) => {
                     let all_down = self.all_neighbours_in_direction_placed(neighbour.id, Down);
                     let unplaced = self.row_unplaced(neighbour.id);
@@ -217,15 +229,15 @@ impl<'a> TileShuffler<'a> {
                     if all_down && (unplaced || same_y_placed) {
                         self.states[neighbour.id] = Placable;
                     }
-                },
+                }
                 (_, _) => (),
             }
         }
     }
 
     fn row_unplaced(&self, tile: usize) -> bool {
-        self.all_recursive_neighbours_unplaced(tile, Left) &&
-        self.all_recursive_neighbours_unplaced(tile, Right)
+        self.all_recursive_neighbours_unplaced(tile, Left)
+            && self.all_recursive_neighbours_unplaced(tile, Right)
     }
 
     fn same_y_neighbour_placed(&self, tile: usize) -> bool {
@@ -282,7 +294,7 @@ impl<'a> TileShuffler<'a> {
                     }
                 }
                 tiles = new_tiles;
-            },
+            }
             _ => (),
         }
 

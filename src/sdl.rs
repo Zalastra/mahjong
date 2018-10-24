@@ -1,6 +1,6 @@
-use sdl2::{self, EventPump};
 use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::video::WindowContext;
+use sdl2::{self, EventPump};
 
 use sdl2::image::INIT_PNG;
 
@@ -15,7 +15,8 @@ pub fn init_sdl() -> SdlContext {
     sdl2::image::init(INIT_PNG).expect("error initializing sdl2 image");
 
     let video_subsystem = sdl_context.video().expect("error creating video subsystem");
-    let mut window = video_subsystem.window("Mahjong", 1080, 750)
+    let mut window = video_subsystem
+        .window("Mahjong", 1080, 750)
         .maximized()
         .resizable()
         .build()
@@ -23,12 +24,20 @@ pub fn init_sdl() -> SdlContext {
 
     window.set_minimum_size(730, 500).unwrap();
 
-    let mut canvas = window.into_canvas().present_vsync().build().expect("error creating window canvas");
+    let mut canvas = window
+        .into_canvas()
+        .present_vsync()
+        .build()
+        .expect("error creating window canvas");
     canvas.set_logical_size(730, 500).unwrap();
 
     let texture_creator = canvas.texture_creator();
 
     let event_pump = sdl_context.event_pump().expect("error creating event pump");
 
-    SdlContext { canvas, texture_creator, event_pump }
+    SdlContext {
+        canvas,
+        texture_creator,
+        event_pump,
+    }
 }

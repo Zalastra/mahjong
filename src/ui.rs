@@ -2,11 +2,11 @@ use std::path::Path;
 
 use sdl2::event::Event;
 use sdl2::event::Event::{MouseButtonDown, MouseButtonUp};
+use sdl2::image::LoadTexture;
 use sdl2::mouse::MouseButton;
 use sdl2::rect::Rect;
-use sdl2::render::{WindowCanvas, Texture, TextureCreator};
+use sdl2::render::{Texture, TextureCreator, WindowCanvas};
 use sdl2::video::WindowContext;
-use sdl2::image::LoadTexture;
 
 use self::Action::*;
 
@@ -16,9 +16,15 @@ pub struct UiContext<'s> {
 
 impl<'s> UiContext<'s> {
     pub fn new(texture_creator: &'s TextureCreator<WindowContext>) -> UiContext<'s> {
-        let start_button_texture = texture_creator.load_texture(Path::new("img/start.png")).unwrap();
-        let undo_button_texture = texture_creator.load_texture(Path::new("img/undo.png")).unwrap();
-        let hint_button_texture = texture_creator.load_texture(Path::new("img/hint.png")).unwrap();
+        let start_button_texture = texture_creator
+            .load_texture(Path::new("img/start.png"))
+            .unwrap();
+        let undo_button_texture = texture_creator
+            .load_texture(Path::new("img/undo.png"))
+            .unwrap();
+        let hint_button_texture = texture_creator
+            .load_texture(Path::new("img/hint.png"))
+            .unwrap();
 
         let start_button = Button::new(10, 10, 120, 50, Start, start_button_texture);
         let undo_button = Button::new(10, 70, 120, 50, Undo, undo_button_texture);
@@ -48,7 +54,6 @@ impl<'s> UiContext<'s> {
         None
     }
     
-
     pub fn render(&self, canvas: &mut WindowCanvas) {
         for button in &self.buttons {
             button.render(canvas);
@@ -96,7 +101,7 @@ impl<'s> Button<'s> {
             self.pressed = false;
             let point_rect = Rect::new(x, y, 1, 1);
             if self.placement.has_intersection(point_rect) {
-                return Some(self.action)
+                return Some(self.action);
             }
         }
         None

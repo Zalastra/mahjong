@@ -1,22 +1,22 @@
 use std::cmp::Ordering::*;
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::iter::{Enumerate, FilterMap};
 use std::path::{Path, PathBuf};
 use std::slice::Iter;
 
-use sdl2::render::{WindowCanvas, Texture, TextureCreator};
 use sdl2::image::LoadTexture;
+use sdl2::render::{Texture, TextureCreator, WindowCanvas};
 use sdl2::video::WindowContext;
 
 mod models;
-mod types;
-mod shuffle;
 mod position;
+mod shuffle;
+mod types;
 
 use self::models::Models;
-use self::types::TileType;
+use self::position::{Direction, Neighbour, Position};
 use self::shuffle::shuffle;
-use self::position::{Position, Neighbour, Direction};
+use self::types::TileType;
 
 use self::Direction::*;
 use self::PlayState::*;
@@ -33,7 +33,10 @@ pub struct Tiles<'s> {
 }
 
 impl<'s> Tiles<'s> {
-    pub fn new(raw_positions: &mut [(u8, u8, u8); 144], texture_creator: &'s TextureCreator<WindowContext>) -> Self {
+    pub fn new(
+        raw_positions: &mut [(u8, u8, u8); 144],
+        texture_creator: &'s TextureCreator<WindowContext>,
+    ) -> Self {
         // NOTE: sorting currently needed for rendering
         // NOTE: also needed now for searching for a tile based on coords
         //       maybe this should just be left in?
@@ -45,9 +48,7 @@ impl<'s> Tiles<'s> {
             }
         });
 
-        let positions = raw_positions.iter()
-            .map(Position::from)
-            .collect::<Vec<_>>();
+        let positions = raw_positions.iter().map(Position::from).collect::<Vec<_>>();
 
         let neighbours = create_neighbour_list(&positions);
         let mut types = vec![Default::default(); 144];
@@ -92,7 +93,8 @@ impl<'s> Tiles<'s> {
         let side_tex = &self.textures[&Side];
         let bottom_tex = &self.textures[&Bottom];
 
-        let iter = self.types
+        let iter = self
+            .types
             .iter()
             .zip(self.models.iter())
             .zip(self.states.iter());
@@ -133,14 +135,18 @@ impl<'s> Tiles<'s> {
     }
 
     pub fn playable_tiles(&self) -> PlayableTiles {
-        PlayableTiles { 
-            iter: self.states.iter().enumerate().filter_map(|(index, &state)| {
-                if state == Playable {
-                    Some(TileId(index))
-                } else {
-                    None
-                }
-            })
+        PlayableTiles {
+            iter: self
+                .states
+                .iter()
+                .enumerate()
+                .filter_map(|(index, &state)| {
+                    if state == Playable {
+                        Some(TileId(index))
+                    } else {
+                        None
+                    }
+                }),
         }
     }
 
@@ -160,7 +166,7 @@ impl<'s> Tiles<'s> {
                     let any_up = self.any_unplayed_neighbour_in_direction(neighbour.id, Up);
                     let any_left = self.any_unplayed_neighbour_in_direction(neighbour.id, Left);
                     let any_right = self.any_unplayed_neighbour_in_direction(neighbour.id, Right);
-                    
+
                     if any_up || (any_left && any_right) {
                         self.states[neighbour.id] = Blocked;
                     } else {
@@ -182,7 +188,10 @@ impl<'s> Tiles<'s> {
 
 #[derive(Clone, Debug)]
 pub struct PlayableTiles<'a> {
-    iter: FilterMap<Enumerate<Iter<'a, PlayState>>, for<'r> fn((usize, &'r PlayState)) ->Option<TileId>>
+    iter: FilterMap<
+        Enumerate<Iter<'a, PlayState>>,
+        for<'r> fn((usize, &'r PlayState)) -> Option<TileId>,
+    >,
 }
 
 impl<'a> Iterator for PlayableTiles<'a> {
@@ -223,7 +232,9 @@ impl Default for PlayState {
     }
 }
 
-fn create_textures<'s>(texture_creator: &'s TextureCreator<WindowContext>) -> HashMap<TextureId, Texture<'s>> {
+fn create_textures<'s>(
+    texture_creator: &'s TextureCreator<WindowContext>,
+) -> HashMap<TextureId, Texture<'s>> {
     use self::TextureId::*;
 
     let mut textures = HashMap::new();
@@ -233,17 +244,23 @@ fn create_textures<'s>(texture_creator: &'s TextureCreator<WindowContext>) -> Ha
         texture_path_buf.push(tile_type.filename_texture());
         let texture_path = texture_path_buf.as_path();
 
-        let mut texture = texture_creator.load_texture(texture_path).expect(ERROR_MESSAGE);
+        let mut texture = texture_creator
+            .load_texture(texture_path)
+            .expect(ERROR_MESSAGE);
         texture.set_color_mod(255, 127, 127);
         textures.insert(Face(*tile_type, true), texture);
 
-        let texture = texture_creator.load_texture(texture_path).expect(ERROR_MESSAGE);
+        let texture = texture_creator
+            .load_texture(texture_path)
+            .expect(ERROR_MESSAGE);
         textures.insert(Face(*tile_type, false), texture);
     }
 
-    let side_texture = texture_creator.load_texture(Path::new("img/TileSide.png"))
+    let side_texture = texture_creator
+        .load_texture(Path::new("img/TileSide.png"))
         .expect(ERROR_MESSAGE);
-    let bottom_texture = texture_creator.load_texture(Path::new("img/TileBottom.png"))
+    let bottom_texture = texture_creator
+        .load_texture(Path::new("img/TileBottom.png"))
         .expect(ERROR_MESSAGE);
 
     textures.insert(Side, side_texture);
