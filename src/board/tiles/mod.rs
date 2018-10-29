@@ -15,7 +15,7 @@ mod types;
 
 use self::models::Models;
 use self::position::{Direction, Neighbour, Position};
-use self::shuffle::shuffle;
+use self::shuffle::get_shuffled_types;
 use self::types::TileType;
 
 use self::Direction::*;
@@ -24,7 +24,6 @@ use self::PlayState::*;
 static ERROR_MESSAGE: &'static str = "error loading texture";
 
 pub struct Tiles<'s> {
-    positions: Vec<Position>,
     neighbours: Vec<Vec<Neighbour>>,
     types: Vec<TileType>,
     states: Vec<PlayState>,
@@ -51,17 +50,12 @@ impl<'s> Tiles<'s> {
         let positions = raw_positions.iter().map(Position::from).collect::<Vec<_>>();
 
         let neighbours = create_neighbour_list(&positions);
-        let mut types = vec![Default::default(); 144];
-
-        shuffle(&mut types, &positions, &neighbours);
-
-        //let types = TileShuffler::new(&positions, &neighbours).shuffle();
+        let types = get_shuffled_types(&neighbours);
         let states = vec![Default::default(); 144];
         let models = Models::new(raw_positions);
         let textures = create_textures(texture_creator);
 
         let mut tiles = Tiles {
-            positions,
             neighbours,
             types,
             states,
@@ -77,8 +71,8 @@ impl<'s> Tiles<'s> {
     }
 
     pub fn reset(&mut self) {
-        shuffle(&mut self.types, &self.positions, &self.neighbours);
-
+        self.types = get_shuffled_types(&self.neighbours);
+        
         for tile in 0..144 {
             self.states[tile] = Blocked;
         }

@@ -56,17 +56,6 @@ pub enum Direction {
     Left,
 }
 
-impl Direction {
-    pub fn rev(self) -> Direction {
-        match self {
-            Left => Right,
-            Right => Left,
-            Up => Down,
-            Down => Up,
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct Neighbour {
     pub id: usize,
