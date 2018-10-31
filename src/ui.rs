@@ -15,7 +15,7 @@ pub struct UiContext<'tc> {
 }
 
 impl<'tc> UiContext<'tc> {
-    pub fn new(texture_creator: &'tc TextureCreator<WindowContext>) -> UiContext<'tc> {
+    pub fn new(texture_creator: &'tc TextureCreator<WindowContext>) -> Self {
         let start_button_texture = texture_creator
             .load_texture(Path::new("img/start.png"))
             .unwrap();
