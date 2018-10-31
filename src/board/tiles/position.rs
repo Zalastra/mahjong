@@ -1,5 +1,3 @@
-use self::Direction::*;
-
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Position {
     pub x: u8,
@@ -9,6 +7,8 @@ pub struct Position {
 
 impl Position {
     pub fn neighbours(self, other: Position) -> Option<Direction> {
+        use self::Direction::*;
+
         if self.is_up_neighbour(other) { Some(Up) }
         else if self.is_down_neighbour(other) { Some(Down) }
         else if self.is_left_neighbour(other) { Some(Left) }

@@ -1,10 +1,15 @@
-use rand::{thread_rng, Rng};
-
-use super::position::{Direction, Neighbour};
-use super::types::TileType;
-use super::Direction::*;
-
-use self::ShuffleState::*;
+use {
+    rand::{
+        thread_rng,
+        Rng,
+    },
+    super::{
+        Direction,
+        Neighbour,
+        TileType,
+    },
+    self::ShuffleState::*,
+};
 
 pub fn get_shuffled_types(neighbours: &[Vec<Neighbour>]) -> Vec<TileType> {
     assert!(neighbours.len() % 2 == 0);
@@ -78,6 +83,8 @@ impl<'n> TypeShuffler<'n> {
     }
 
     fn update_unplaced_neighbours_shuffle_states(&mut self, tile_id: usize) {
+        use self::Direction::*;
+
         for neighbour in &self.neighbours[tile_id] {
             if self.states[neighbour.id] == Blocked {
                 let any_up = self.any_unplaced_neighbour_in_direction(neighbour.id, Up);

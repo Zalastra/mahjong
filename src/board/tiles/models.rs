@@ -1,6 +1,10 @@
-use std::ops::{Deref, DerefMut};
-
-use sdl2::rect::Rect;
+use {
+    std::ops::{
+        Deref,
+        DerefMut,
+    },
+    sdl2::rect::Rect,
+};
 
 static TILE_WIDTH: u32 = 46;
 static TILE_HEIGHT: u32 = 57; // TODO: change texture height to even number

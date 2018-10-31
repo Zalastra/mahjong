@@ -1,8 +1,12 @@
-use sdl2::render::{TextureCreator, WindowCanvas};
-use sdl2::video::WindowContext;
-use sdl2::{self, EventPump};
-
-use sdl2::image::INIT_PNG;
+use sdl2::{
+    EventPump,
+    image::INIT_PNG,
+    render::{
+        TextureCreator,
+        WindowCanvas,
+    },
+    video::WindowContext,
+};
 
 pub struct SdlContext {
     pub canvas: WindowCanvas,

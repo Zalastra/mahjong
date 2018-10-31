@@ -1,11 +1,19 @@
 mod tiles;
 
-use std::time::Instant;
-
-use sdl2::render::{TextureCreator, WindowCanvas};
-use sdl2::video::WindowContext;
-
-use self::tiles::{TileId, Tiles};
+use {
+    std::time::Instant,
+    sdl2::{
+        render::{
+            TextureCreator,
+            WindowCanvas,
+        },
+        video::WindowContext,
+    },
+    self::tiles::{
+        TileId,
+        Tiles
+    },
+};
 
 pub struct Board<'tc> {
     tiles: Tiles<'tc>,

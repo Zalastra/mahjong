@@ -1,25 +1,43 @@
-use std::cmp::Ordering::*;
-use std::collections::HashMap;
-use std::iter::{Enumerate, FilterMap};
-use std::path::{Path, PathBuf};
-use std::slice::Iter;
-
-use sdl2::image::LoadTexture;
-use sdl2::render::{Texture, TextureCreator, WindowCanvas};
-use sdl2::video::WindowContext;
-
 mod models;
 mod position;
 mod shuffle;
 mod types;
 
-use self::models::Models;
-use self::position::{Direction, Neighbour, Position};
-use self::shuffle::get_shuffled_types;
-use self::types::TileType;
-
-use self::Direction::*;
-use self::PlayState::*;
+use {
+    std::{
+        cmp::Ordering,
+        collections::HashMap,
+        iter::{
+            Enumerate,
+            FilterMap,
+        },
+        path::{
+            Path,
+            PathBuf,
+        },
+        slice::Iter,
+    },
+    sdl2::{
+        image::LoadTexture,
+        render::{
+            Texture,
+            TextureCreator,
+            WindowCanvas,
+        },
+        video::WindowContext,
+    },
+    self::{
+        models::Models,
+        position::{
+            Direction,
+            Neighbour,
+            Position,
+        },
+        shuffle::get_shuffled_types,
+        types::TileType,
+        PlayState::*,
+    }
+};
 
 static ERROR_MESSAGE: &str = "error loading texture";
 
@@ -41,9 +59,9 @@ impl<'tc> Tiles<'tc> {
         //       maybe this should just be left in?
         raw_positions.sort_by(|&(x1, y1, z1), &(x2, y2, z2)| {
             if (z1, x2, y1) < (z2, x1, y2) {
-                Less
+                Ordering::Less
             } else {
-                Greater
+                Ordering::Greater
             }
         });
 
@@ -154,6 +172,8 @@ impl<'tc> Tiles<'tc> {
     }
 
     fn update_neighbouring_tile_states(&mut self, tile: usize) {
+        use self::Direction::*;
+
         for neighbour in &self.neighbours[tile] {
             match self.states[neighbour.id] {
                 Blocked | Playable => {

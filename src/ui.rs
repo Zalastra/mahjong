@@ -1,14 +1,22 @@
-use std::path::Path;
-
-use sdl2::event::Event;
-use sdl2::event::Event::{MouseButtonDown, MouseButtonUp};
-use sdl2::image::LoadTexture;
-use sdl2::mouse::MouseButton;
-use sdl2::rect::Rect;
-use sdl2::render::{Texture, TextureCreator, WindowCanvas};
-use sdl2::video::WindowContext;
-
-use self::Action::*;
+use {
+    std::path::Path,
+    sdl2::{
+        event::Event::{
+            self,
+            MouseButtonDown,
+            MouseButtonUp,
+        },
+        image::LoadTexture,
+        mouse::MouseButton,
+        rect::Rect,
+        render::{
+            Texture,
+            TextureCreator,
+            WindowCanvas,
+        },
+        video::WindowContext,
+    },
+};
 
 pub struct UiContext<'tc> {
     buttons: [Button<'tc>; 3],
@@ -16,6 +24,8 @@ pub struct UiContext<'tc> {
 
 impl<'tc> UiContext<'tc> {
     pub fn new(texture_creator: &'tc TextureCreator<WindowContext>) -> Self {
+        use self::Action::*;
+        
         let start_button_texture = texture_creator
             .load_texture(Path::new("img/start.png"))
             .unwrap();

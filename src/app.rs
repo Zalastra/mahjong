@@ -1,16 +1,24 @@
-use std::thread;
-use std::time::Duration;
-
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::messagebox::*;
-use sdl2::mouse::MouseButton;
-use sdl2::pixels::Color;
-
-use crate::board::Board;
-use crate::sdl::SdlContext;
-use crate::ui::Action::*;
-use crate::ui::UiContext;
+use {
+    std::{
+        thread,
+        time::Duration,
+    },
+    sdl2::{
+        event::Event,
+        keyboard::Keycode,
+        messagebox::*,
+        mouse::MouseButton,
+        pixels::Color,
+    },
+    crate::{
+        board::Board,
+        sdl::SdlContext,
+        ui::{
+            Action,
+            UiContext
+        },
+    },
+};
 
 pub fn run(sdl: &mut SdlContext) {
     let mut board = Board::new(&sdl.texture_creator);
@@ -26,9 +34,9 @@ pub fn run(sdl: &mut SdlContext) {
         for event in sdl.event_pump.poll_iter() {
             let mut done = true;
             match ui.handle_event(&event) {
-                Some(Start) => board.reset(),
-                Some(Undo) => board.undo(),
-                Some(Hint) => board.highlight_possible_matches(),
+                Some(Action::Start) => board.reset(),
+                Some(Action::Undo) => board.undo(),
+                Some(Action::Hint) => board.highlight_possible_matches(),
                 _ => done = false,
             }
             if done {
