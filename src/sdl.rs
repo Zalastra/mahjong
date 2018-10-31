@@ -10,7 +10,7 @@ pub struct SdlContext {
     pub event_pump: EventPump,
 }
 
-pub fn init_sdl() -> SdlContext {
+pub fn init() -> SdlContext {
     let sdl_context = sdl2::init().expect("error creating sdl context");
     sdl2::image::init(INIT_PNG).expect("error initializing sdl2 image");
 

@@ -7,12 +7,12 @@ use sdl2::messagebox::*;
 use sdl2::mouse::MouseButton;
 use sdl2::pixels::Color;
 
-use board::Board;
-use sdl::SdlContext;
-use ui::Action::*;
-use ui::UiContext;
+use crate::board::Board;
+use crate::sdl::SdlContext;
+use crate::ui::Action::*;
+use crate::ui::UiContext;
 
-pub fn run_game(sdl: &mut SdlContext) {
+pub(crate) fn run(sdl: &mut SdlContext) {
     let mut board = Board::new(&sdl.texture_creator);
     let mut ui = UiContext::new(&sdl.texture_creator);
     
