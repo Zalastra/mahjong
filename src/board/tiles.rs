@@ -21,7 +21,7 @@ use self::types::TileType;
 use self::Direction::*;
 use self::PlayState::*;
 
-static ERROR_MESSAGE: &'static str = "error loading texture";
+static ERROR_MESSAGE: &str = "error loading texture";
 
 pub struct Tiles<'tc> {
     neighbours: Vec<Vec<Neighbour>>,
