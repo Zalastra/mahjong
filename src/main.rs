@@ -5,7 +5,8 @@ mod board;
 mod sdl;
 mod ui;
 
+
 fn main() {
-    let mut sdl = sdl::init_sdl();
-    app::run_game(&mut sdl);
+    let mut sdl = sdl::init();
+    app::run(&mut sdl);
 }
