@@ -10,12 +10,12 @@ use sdl2::video::WindowContext;
 
 use self::Action::*;
 
-pub struct UiContext<'s> {
-    buttons: [Button<'s>; 3],
+pub struct UiContext<'tc> {
+    buttons: [Button<'tc>; 3],
 }
 
-impl<'s> UiContext<'s> {
-    pub fn new(texture_creator: &'s TextureCreator<WindowContext>) -> UiContext<'s> {
+impl<'tc> UiContext<'tc> {
+    pub fn new(texture_creator: &'tc TextureCreator<WindowContext>) -> UiContext<'tc> {
         let start_button_texture = texture_creator
             .load_texture(Path::new("img/start.png"))
             .unwrap();
@@ -68,14 +68,14 @@ pub enum Action {
     Hint,
 }
 
-struct Button<'s> {
+struct Button<'tc> {
     placement: Rect,
-    texture: Texture<'s>,
+    texture: Texture<'tc>,
     action: Action,
     pressed: bool,
 }
 
-impl<'s> Button<'s> {
+impl Button<'_> {
     fn new(x: i32, y: i32, width: u32, height: u32, action: Action, texture: Texture) -> Button {
         Button {
             placement: Rect::new(x / 2, y / 2, width / 2, height / 2),

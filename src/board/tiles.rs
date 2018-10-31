@@ -23,18 +23,18 @@ use self::PlayState::*;
 
 static ERROR_MESSAGE: &'static str = "error loading texture";
 
-pub struct Tiles<'s> {
+pub struct Tiles<'tc> {
     neighbours: Vec<Vec<Neighbour>>,
     types: Vec<TileType>,
     states: Vec<PlayState>,
     models: Models,
-    textures: HashMap<TextureId, Texture<'s>>,
+    textures: HashMap<TextureId, Texture<'tc>>,
 }
 
-impl<'s> Tiles<'s> {
+impl<'tc> Tiles<'tc> {
     pub fn new(
         raw_positions: &mut [(u8, u8, u8); 144],
-        texture_creator: &'s TextureCreator<WindowContext>,
+        texture_creator: &'tc TextureCreator<WindowContext>,
     ) -> Self {
         // NOTE: sorting currently needed for rendering
         // NOTE: also needed now for searching for a tile based on coords
@@ -188,7 +188,7 @@ pub struct PlayableTiles<'a> {
     >,
 }
 
-impl<'a> Iterator for PlayableTiles<'a> {
+impl Iterator for PlayableTiles<'_> {
     type Item = TileId;
 
     fn next(&mut self) -> Option<TileId> {
@@ -226,9 +226,9 @@ impl Default for PlayState {
     }
 }
 
-fn create_textures<'s>(
-    texture_creator: &'s TextureCreator<WindowContext>,
-) -> HashMap<TextureId, Texture<'s>> {
+fn create_textures<'tc>(
+    texture_creator: &'tc TextureCreator<WindowContext>,
+) -> HashMap<TextureId, Texture<'tc>> {
     use self::TextureId::*;
 
     let mut textures = HashMap::new();

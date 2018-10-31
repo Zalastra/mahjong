@@ -7,15 +7,15 @@ use sdl2::video::WindowContext;
 
 use self::tiles::{TileId, Tiles};
 
-pub struct Board<'s> {
-    tiles: Tiles<'s>,
+pub struct Board<'tc> {
+    tiles: Tiles<'tc>,
     played: Vec<(TileId, TileId)>,
     selected_tile: Option<TileId>,
     hints: Option<Hints>,
 }
 
-impl<'s> Board<'s> {
-    pub fn new(texture_creator: &'s TextureCreator<WindowContext>) -> Board<'s> {
+impl<'tc> Board<'tc> {
+    pub fn new(texture_creator: &'tc TextureCreator<WindowContext>) -> Self {
         let mut positions = get_raw_positios();
 
         let tiles = Tiles::new(&mut positions, texture_creator);

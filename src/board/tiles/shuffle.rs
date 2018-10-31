@@ -19,15 +19,15 @@ pub fn get_shuffled_types(neighbours: &[Vec<Neighbour>]) -> Vec<TileType> {
 }
 
 #[derive(Debug)]
-struct TypeShuffler<'a> {
-    neighbours: &'a [Vec<Neighbour>],
+struct TypeShuffler<'n> {
+    neighbours: &'n [Vec<Neighbour>],
     states: Vec<ShuffleState>,
     available_types: Vec<TileType>,
     set_types: Vec<Option<TileType>>,
 }
 
-impl<'a> TypeShuffler<'a> {
-    fn from_neighbourlist(neighbours: &'a [Vec<Neighbour>]) -> Self {
+impl<'n> TypeShuffler<'n> {
+    fn from_neighbourlist(neighbours: &'n [Vec<Neighbour>]) -> Self {
         let states = vec![ShuffleState::default(); neighbours.len()];
         let available_types = get_tile_types();
         let set_types = vec![None; neighbours.len()];
