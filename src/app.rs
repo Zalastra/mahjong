@@ -12,7 +12,7 @@ use crate::sdl::SdlContext;
 use crate::ui::Action::*;
 use crate::ui::UiContext;
 
-pub(crate) fn run(sdl: &mut SdlContext) {
+pub fn run(sdl: &mut SdlContext) {
     let mut board = Board::new(&sdl.texture_creator);
     let mut ui = UiContext::new(&sdl.texture_creator);
     
