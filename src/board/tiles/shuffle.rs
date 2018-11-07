@@ -14,13 +14,20 @@ use {
 pub fn get_shuffled_types(neighbours: &[Vec<Neighbour>]) -> Vec<TileType> {
     assert!(neighbours.len() % 2 == 0);
 
-    let mut shuffler = TypeShuffler::from_neighbourlist(neighbours);
+    // TODO: Fix the shuffling for real this time.
+    //       Placing tiles as if playing them still leaves the possibility of being left
+    //       with two tiles on top of eachother that both need to be placed but obviously can't.
+    loop {
+        let mut shuffler = TypeShuffler::from_neighbourlist(neighbours);
 
-    for _ in 0..neighbours.len() / 2 {
-        shuffler.place_random_type_pair();
+        for pairs_left in (0..neighbours.len() / 2).rev() {
+            if !shuffler.place_random_type_pair(pairs_left) {
+                continue;
+            }
+        }
+
+        return shuffler.set_types.iter().filter_map(|t| *t).collect();
     }
-
-    shuffler.set_types.iter().filter_map(|t| *t).collect()
 }
 
 #[derive(Debug)]
@@ -51,8 +58,32 @@ impl<'n> TypeShuffler<'n> {
         type_shuffler
     }
 
-    fn place_random_type_pair(&mut self) {
+    fn place_random_type_pair(&mut self, pairs_left: usize) -> bool {
         let mut placable_tiles = self.get_placable_tiles();
+
+        /*let unplaced_elevated_tiles = self
+            .states
+            .iter()
+            .enumerate()
+            .filter(|&(_, &state)| state != Placed)
+            .filter_map(|(tile, _)| {
+                if self.any_unplaced_neighbour_in_direction(tile, Direction::Down) {
+                    Some(tile)
+                } else {
+                    None
+                }
+            })
+            .count();
+
+        if (unplaced_elevated_tiles / 2 + unplaced_elevated_tiles % 2) == pairs_left {
+            placable_tiles = placable_tiles.into_iter().filter(|&tile| {
+                self.neighbours[tile].iter().any(|neighbour| neighbour.direction == Direction::Down)
+            }).collect();
+        }*/
+
+        if placable_tiles.len() < 2 {
+            return false;
+        }
 
         let random_index = thread_rng().gen_range(0, self.available_types.len() / 2) * 2;
         let tile_type1 = self.available_types.swap_remove(random_index + 1);
@@ -71,6 +102,8 @@ impl<'n> TypeShuffler<'n> {
 
         self.set_types[tile_id1] = Some(tile_type1);
         self.set_types[tile_id2] = Some(tile_type2);
+
+        true
     }
 
     fn get_placable_tiles(&self) -> Vec<usize> {
