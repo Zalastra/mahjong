@@ -37,6 +37,8 @@ impl<'tc> Board<'tc> {
     }
 
     pub fn reset(&mut self) {
+        self.deselect_tile();
+        self.stop_hints();
         self.tiles.reset();
         self.played = Vec::new();
         self.selected_tile = None;
