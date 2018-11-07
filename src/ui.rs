@@ -6,15 +6,14 @@ use {
             MouseButtonDown,
             MouseButtonUp,
         },
-        image::LoadTexture,
         mouse::MouseButton,
-        rect::Rect,
-        render::{
-            Texture,
-            TextureCreator,
-            WindowCanvas,
-        },
-        video::WindowContext,
+    },
+    crate::graphics::{
+        Point,
+        Rect,
+        RenderTarget2D,
+        TextureCreator,
+        TextureHandle,
     },
 };
 
@@ -23,7 +22,7 @@ pub struct UiContext<'tc> {
 }
 
 impl<'tc> UiContext<'tc> {
-    pub fn new(texture_creator: &'tc TextureCreator<WindowContext>) -> Self {
+    pub fn new<T: TextureCreator>(texture_creator: &'tc T) -> Self {
         use self::Action::*;
         
         let start_button_texture = texture_creator
@@ -64,7 +63,7 @@ impl<'tc> UiContext<'tc> {
         None
     }
     
-    pub fn render(&self, canvas: &mut WindowCanvas) {
+    pub fn render<R: RenderTarget2D>(&self, canvas: &mut R) {
         for button in &self.buttons {
             button.render(canvas);
         }
@@ -80,13 +79,13 @@ pub enum Action {
 
 struct Button<'tc> {
     placement: Rect,
-    texture: Texture<'tc>,
+    texture: TextureHandle<'tc>,
     action: Action,
     pressed: bool,
 }
 
 impl Button<'_> {
-    fn new(x: i32, y: i32, width: u32, height: u32, action: Action, texture: Texture) -> Button {
+    fn new(x: i32, y: i32, width: u16, height: u16, action: Action, texture: TextureHandle) -> Button {
         Button {
             placement: Rect::new(x / 2, y / 2, width / 2, height / 2),
             texture,
@@ -95,13 +94,12 @@ impl Button<'_> {
         }
     }
 
-    fn render(&self, canvas: &mut WindowCanvas) {
-        let _ = canvas.copy(&self.texture, None, Some(self.placement));
+    fn render<R: RenderTarget2D>(&self, canvas: &mut R) {
+        let _ = canvas.draw_texture(&self.texture, None, Some(self.placement.into()));
     }
 
     fn mouse_down(&mut self, x: i32, y: i32) {
-        let point_rect = Rect::new(x, y, 1, 1);
-        if self.placement.has_intersection(point_rect) {
+        if self.placement.contains_point(Point::new(x, y)) {
             self.pressed = true;
         }
     }
@@ -109,8 +107,7 @@ impl Button<'_> {
     fn mouse_up(&mut self, x: i32, y: i32) -> Option<Action> {
         if self.pressed {
             self.pressed = false;
-            let point_rect = Rect::new(x, y, 1, 1);
-            if self.placement.has_intersection(point_rect) {
+            if self.placement.contains_point(Point::new(x, y)) {
                 return Some(self.action);
             }
         }

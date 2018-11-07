@@ -17,15 +17,6 @@ use {
         },
         slice::Iter,
     },
-    sdl2::{
-        image::LoadTexture,
-        render::{
-            Texture,
-            TextureCreator,
-            WindowCanvas,
-        },
-        video::WindowContext,
-    },
     self::{
         models::Models,
         position::{
@@ -36,7 +27,12 @@ use {
         shuffle::get_shuffled_types,
         types::TileType,
         PlayState::*,
-    }
+    },
+    crate::graphics::{
+        RenderTarget2D,
+        TextureHandle,
+        TextureCreator,
+    },
 };
 
 static ERROR_MESSAGE: &str = "error loading texture";
@@ -46,13 +42,13 @@ pub struct Tiles<'tc> {
     types: Vec<TileType>,
     states: Vec<PlayState>,
     models: Models,
-    textures: HashMap<TextureId, Texture<'tc>>,
+    textures: HashMap<TextureId, TextureHandle<'tc>>,
 }
 
 impl<'tc> Tiles<'tc> {
-    pub fn new(
+    pub fn new<TC: TextureCreator>(
         raw_positions: &mut [(u8, u8, u8); 144],
-        texture_creator: &'tc TextureCreator<WindowContext>,
+        texture_creator: &'tc TC,
     ) -> Self {
         // NOTE: sorting currently needed for rendering
         // NOTE: also needed now for searching for a tile based on coords
@@ -99,7 +95,7 @@ impl<'tc> Tiles<'tc> {
         }
     }
 
-    pub fn render(&mut self, canvas: &mut WindowCanvas) {
+    pub fn render<R: RenderTarget2D>(&self, canvas: &mut R) {
         use self::TextureId::*;
 
         let side_tex = &self.textures[&Side];
@@ -118,9 +114,9 @@ impl<'tc> Tiles<'tc> {
 
             let face_tex = &self.textures[&Face(*tile_type, model.is_highlighted())];
 
-            let _ = canvas.copy(side_tex, None, Some(model.side()));
-            let _ = canvas.copy(bottom_tex, None, Some(model.bottom()));
-            let _ = canvas.copy(face_tex, None, Some(model.face()));
+            let _ = canvas.draw_texture(side_tex, None, Some(model.side()));
+            let _ = canvas.draw_texture(bottom_tex, None, Some(model.bottom()));
+            let _ = canvas.draw_texture(face_tex, None, Some(model.face()));
         }
     }
 
@@ -246,9 +242,9 @@ impl Default for PlayState {
     }
 }
 
-fn create_textures<'tc>(
-    texture_creator: &'tc TextureCreator<WindowContext>,
-) -> HashMap<TextureId, Texture<'tc>> {
+fn create_textures<'tc, TC: TextureCreator>(
+    texture_creator: &'tc TC
+) -> HashMap<TextureId, TextureHandle<'tc>> {
     use self::TextureId::*;
 
     let mut textures = HashMap::new();

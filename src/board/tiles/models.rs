@@ -3,14 +3,14 @@ use {
         Deref,
         DerefMut,
     },
-    sdl2::rect::Rect,
+    crate::graphics::Rect,
 };
 
-static TILE_WIDTH: u32 = 46;
-static TILE_HEIGHT: u32 = 57; // TODO: change texture height to even number
-static TILE_SIDE_WIDTH: u32 = 5;
-static TILE_BOTTOM_HEIGHT: u32 = 5;
-static TILE_SIDE_HEIGHT: u32 = TILE_HEIGHT + TILE_BOTTOM_HEIGHT;
+static TILE_WIDTH: u16 = 46;
+static TILE_HEIGHT: u16 = 57; // TODO: change texture height to even number
+static TILE_SIDE_WIDTH: u16 = 5;
+static TILE_BOTTOM_HEIGHT: u16 = 5;
+static TILE_SIDE_HEIGHT: u16 = TILE_HEIGHT + TILE_BOTTOM_HEIGHT;
 
 pub struct Models(Vec<TileModel>);
 
