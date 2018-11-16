@@ -5,7 +5,7 @@ authors = ["Maarten Bonsema <maarten.bonsema@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-rand = "0.3"
+rand = "0.6"
 
 [dependencies.sdl2]
 version = "0.31"
