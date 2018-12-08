@@ -1,27 +1,33 @@
 use {
+    std::default::Default,
     rand::{
         thread_rng,
         Rng,
+        SeedableRng,
+        FromEntropy,
+        rngs::SmallRng,
     },
     super::{
         Direction,
         Neighbour,
+        Position,
         TileType,
     },
     self::ShuffleState::*,
 };
 
-pub fn get_shuffled_types(neighbours: &[Vec<Neighbour>]) -> Vec<TileType> {
-    assert!(neighbours.len() % 2 == 0);
-
+pub fn get_shuffled_types(positions: &[Position], neighbours: &[Vec<Neighbour>]) -> Vec<TileType> {
     // TODO: Fix the shuffling for real this time.
     //       Placing tiles as if playing them still leaves the possibility of being left
     //       with two tiles on top of eachother that both need to be placed but obviously can't.
     loop {
-        let mut shuffler = TypeShuffler::from_neighbourlist(neighbours);
+        let mut shuffler: TypeShuffler<SmallRng> = ShufflerBuilder::new(positions, neighbours)
+            .seed_rng(127)
+            .build()
+            .unwrap_or_else(|err| panic!("{}", err));
 
-        for pairs_left in (0..neighbours.len() / 2).rev() {
-            if !shuffler.place_random_type_pair(pairs_left) {
+        for _ in 0..neighbours.len() / 2 {
+            if !shuffler.place_random_type_pair() {
                 continue;
             }
         }
@@ -30,35 +36,80 @@ pub fn get_shuffled_types(neighbours: &[Vec<Neighbour>]) -> Vec<TileType> {
     }
 }
 
-#[derive(Debug)]
-struct TypeShuffler<'n> {
-    neighbours: &'n [Vec<Neighbour>],
-    states: Vec<ShuffleState>,
-    available_types: Vec<TileType>,
-    set_types: Vec<Option<TileType>>,
+struct ShufflerBuilder<'td, R: Rng> {
+    positions: &'td [Position],
+    neighbours: &'td [Vec<Neighbour>],
+    types: Option<Vec<TileType>>,
+    rng: Option<R>,
 }
 
-impl<'n> TypeShuffler<'n> {
-    fn from_neighbourlist(neighbours: &'n [Vec<Neighbour>]) -> Self {
-        let states = vec![ShuffleState::default(); neighbours.len()];
-        let available_types = get_tile_types();
-        let set_types = vec![None; neighbours.len()];
-
-        let mut type_shuffler = Self {
+impl<'td, R> ShufflerBuilder<'td, R> where R: Rng + SeedableRng + FromEntropy {
+    pub fn new(positions:  &'td [Position], neighbours: &'td [Vec<Neighbour>]) -> Self {
+        Self {
+            positions,
             neighbours,
-            states,
+            types: None,
+            rng: None,
+        }
+    }
+
+    pub fn types(mut self, types: Vec<TileType>) -> Self {
+        self.types = Some(types);
+        self
+    }
+
+    pub fn seed_rng(mut self, seed: u64) -> Self {
+        let rng = R::seed_from_u64(seed);
+        self.rng = Some(rng);
+        self
+    }
+
+    pub fn build(self) -> Result<TypeShuffler<'td, R>, &'static str> {
+        let num_tiles = self.positions.len();
+
+        if self.neighbours.len() != num_tiles {
+            return Err("neighbours length does not match positions length");
+        }
+
+        let available_types = self.types.unwrap_or_else(get_tile_types);
+
+        if available_types.len() != num_tiles {
+            return Err("types length does not match positions length");
+        }
+
+        let rng = self.rng.unwrap_or_else(R::from_entropy);
+
+        let mut type_shuffler = TypeShuffler {
+            tiles_left: num_tiles,
+            positions: self.positions,
+            neighbours: self.neighbours,
+            states: vec![Default::default(); num_tiles],
             available_types,
-            set_types,
+            set_types: vec![None; num_tiles],
+            rng,
         };
 
-        for tile_id in 0..neighbours.len() {
+        for tile_id in 0..num_tiles {
             type_shuffler.update_unplaced_neighbours_shuffle_states(tile_id)
         }
 
-        type_shuffler
+        Ok(type_shuffler)
     }
+}
 
-    fn place_random_type_pair(&mut self, pairs_left: usize) -> bool {
+#[derive(Debug)]
+struct TypeShuffler<'td, R: Rng> {
+    tiles_left: usize,
+    positions: &'td [Position],
+    neighbours: &'td [Vec<Neighbour>],
+    states: Vec<ShuffleState>,
+    available_types: Vec<TileType>,
+    set_types: Vec<Option<TileType>>,
+    rng: R,
+}
+
+impl<R> TypeShuffler<'_, R> where R: Rng {
+    fn place_random_type_pair(&mut self) -> bool {
         let mut placable_tiles = self.get_placable_tiles();
 
         /*let unplaced_elevated_tiles = self

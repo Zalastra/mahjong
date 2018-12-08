@@ -42,6 +42,7 @@ use {
 static ERROR_MESSAGE: &str = "error loading texture";
 
 pub struct Tiles<'tc> {
+    positions: Vec<Position>,
     neighbours: Vec<Vec<Neighbour>>,
     types: Vec<TileType>,
     states: Vec<PlayState>,
@@ -68,12 +69,13 @@ impl<'tc> Tiles<'tc> {
         let positions = raw_positions.iter().map(Position::from).collect::<Vec<_>>();
 
         let neighbours = create_neighbour_list(&positions);
-        let types = get_shuffled_types(&neighbours);
+        let types = get_shuffled_types(&positions, &neighbours);
         let states = vec![Default::default(); 144];
         let models = Models::new(raw_positions);
         let textures = create_textures(texture_creator);
 
         let mut tiles = Tiles {
+            positions,
             neighbours,
             types,
             states,
@@ -89,7 +91,7 @@ impl<'tc> Tiles<'tc> {
     }
 
     pub fn reset(&mut self) {
-        self.types = get_shuffled_types(&self.neighbours);
+        self.types = get_shuffled_types(&self.positions, &self.neighbours);
         
         for tile in 0..144 {
             self.states[tile] = Blocked;
