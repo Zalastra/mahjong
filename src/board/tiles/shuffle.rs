@@ -20,7 +20,7 @@ pub fn get_shuffled_types(positions: &[Position], neighbours: &[Vec<Neighbour>])
     // TODO: Fix the shuffling for real this time.
     //       Placing tiles as if playing them still leaves the possibility of being left
     //       with two tiles on top of eachother that both need to be placed but obviously can't.
-    loop {
+    'try_shuffle: loop {
         let mut shuffler: TypeShuffler<SmallRng> = ShufflerBuilder::new(positions, neighbours)
             .seed_rng(127)
             .build()
@@ -28,7 +28,7 @@ pub fn get_shuffled_types(positions: &[Position], neighbours: &[Vec<Neighbour>])
 
         for _ in 0..neighbours.len() / 2 {
             if !shuffler.place_random_type_pair() {
-                continue;
+                continue 'try_shuffle;
             }
         }
 
