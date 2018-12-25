@@ -17,23 +17,15 @@ use {
 };
 
 pub fn get_shuffled_types(positions: &[Position], neighbours: &[Vec<Neighbour>]) -> Vec<TileType> {
-    // TODO: Fix the shuffling for real this time.
-    //       Placing tiles as if playing them still leaves the possibility of being left
-    //       with two tiles on top of eachother that both need to be placed but obviously can't.
-    'try_shuffle: loop {
-        let mut shuffler: TypeShuffler<SmallRng> = ShufflerBuilder::new(positions, neighbours)
-            .seed_rng(127)
-            .build()
-            .unwrap_or_else(|err| panic!("{}", err));
+    let mut shuffler: TypeShuffler<SmallRng> = ShufflerBuilder::new(positions, neighbours)
+        .build()
+        .unwrap_or_else(|err| panic!("{}", err));
 
-        for _ in 0..neighbours.len() / 2 {
-            if !shuffler.place_random_type_pair() {
-                continue 'try_shuffle;
-            }
-        }
-
-        return shuffler.set_types.iter().filter_map(|t| *t).collect();
+    for _ in 0..neighbours.len() / 2 {
+        shuffler.place_random_type_pair()
     }
+
+    shuffler.set_types.iter().filter_map(|t| *t).collect()
 }
 
 struct ShufflerBuilder<'td, R: Rng> {
@@ -53,11 +45,13 @@ impl<'td, R> ShufflerBuilder<'td, R> where R: Rng + SeedableRng + FromEntropy {
         }
     }
 
+    #[allow(dead_code)]
     pub fn types(mut self, types: Vec<TileType>) -> Self {
         self.types = Some(types);
         self
     }
 
+    #[allow(dead_code)]
     pub fn seed_rng(mut self, seed: u64) -> Self {
         let rng = R::seed_from_u64(seed);
         self.rng = Some(rng);
@@ -109,52 +103,47 @@ struct TypeShuffler<'td, R: Rng> {
 }
 
 impl<R> TypeShuffler<'_, R> where R: Rng {
-    fn place_random_type_pair(&mut self) -> bool {
+    /**
+     * Tile shuffle strategy is to assign a random type pair to two random tiles according to the
+     * same rules as they can be played. Additionally to make sure the process does not enter an
+     * invalid state the Z position of tiles is checked to see if some tiles need to be prioritized
+     * for assignment.
+     */
+    fn place_random_type_pair(&mut self) {
         let mut placable_tiles = self.get_placable_tiles();
 
-        /*let unplaced_elevated_tiles = self
-            .states
+        self.tiles_left -= 2;
+
+        let placable_tile_index = placable_tiles
             .iter()
             .enumerate()
-            .filter(|&(_, &state)| state != Placed)
-            .filter_map(|(tile, _)| {
-                if self.any_unplaced_neighbour_in_direction(tile, Direction::Down) {
-                    Some(tile)
-                } else {
-                    None
-                }
-            })
-            .count();
+            .find(|(_, &tile)| self.tiles_left == usize::from(self.positions[tile].z) * 2)
+            .map(|(index, _)| index)
+            .unwrap_or_else(|| thread_rng().gen_range(0, placable_tiles.len()));
 
-        if (unplaced_elevated_tiles / 2 + unplaced_elevated_tiles % 2) == pairs_left {
-            placable_tiles = placable_tiles.into_iter().filter(|&tile| {
-                self.neighbours[tile].iter().any(|neighbour| neighbour.direction == Direction::Down)
-            }).collect();
-        }*/
+        let tile_id1 = placable_tiles.swap_remove(placable_tile_index);
 
-        if placable_tiles.len() < 2 {
-            return false;
-        }
+        let placable_tile_index = placable_tiles
+            .iter()
+            .enumerate()
+            .find(|(_, &tile)| self.tiles_left == usize::from(self.positions[tile].z) * 2)
+            .map(|(index, _)| index)
+            .unwrap_or_else(|| thread_rng().gen_range(0, placable_tiles.len()));
+
+        let tile_id2 = placable_tiles.swap_remove(placable_tile_index);
+
+        self.states[tile_id1] = Placed;
+        self.states[tile_id2] = Placed;
+
+        self.update_unplaced_neighbours_shuffle_states(tile_id1);
+        self.update_unplaced_neighbours_shuffle_states(tile_id2);
 
         let random_index = thread_rng().gen_range(0, self.available_types.len() / 2) * 2;
         let tile_type1 = self.available_types.swap_remove(random_index + 1);
         let tile_type2 = self.available_types.swap_remove(random_index);
 
-        let random_index = thread_rng().gen_range(0, placable_tiles.len());
-        let tile_id1 = placable_tiles.swap_remove(random_index);
-
-        let random_index = thread_rng().gen_range(0, placable_tiles.len());
-        let tile_id2 = placable_tiles.swap_remove(random_index);
-
-        self.states[tile_id1] = Placed;
-        self.update_unplaced_neighbours_shuffle_states(tile_id1);
-        self.states[tile_id2] = Placed;
-        self.update_unplaced_neighbours_shuffle_states(tile_id2);
-
         self.set_types[tile_id1] = Some(tile_type1);
         self.set_types[tile_id2] = Some(tile_type2);
-
-        true
     }
 
     fn get_placable_tiles(&self) -> Vec<usize> {
